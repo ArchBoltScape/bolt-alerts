@@ -1,0 +1,5 @@
+{
+  "main": "main.lua",
+  "name": "Alerter",
+  "description": "Various tools to send alerts and notifications when something happens"
+}
