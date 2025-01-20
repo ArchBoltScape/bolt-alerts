@@ -27,6 +27,7 @@ local buffs = {
   cannonballs = {},
   cannontimer = {},
   grimoire = {},
+  porter = {},
 
   incenseavantoe = {},
   incensecadantine = {},
@@ -156,6 +157,12 @@ local rendericonlookup1 = {
   [240] = function (event)
     local x, y, z = event:modelvertexpoint(1, 1):get()
     if x == 68 and y == 184 and z == -60 then return buffs.cannonballs, buffs.cannontimer end
+    return nil, nil
+  end,
+
+  [366] = function (event)
+    local x, y, z = event:modelvertexpoint(1, 1):get()
+    if x == -86 and y == 15 and z == -21 then return buffs.porter, nil end
     return nil, nil
   end,
 
