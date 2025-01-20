@@ -28,6 +28,7 @@ local buffs = {
   cannontimer = {},
   grimoire = {},
   porter = {},
+  signoflife = {},
 
   incenseavantoe = {},
   incensecadantine = {},
@@ -148,6 +149,12 @@ local rendericonlookup1godbookmatch = function (event)
 end
 
 local rendericonlookup1 = {
+  [72] = function (event)
+    local x, y, z = event:modelvertexpoint(1, 1):get()
+    if x == -76 and y == 0 and z == 0 then return nil, buffs.signoflife end
+    return nil, nil
+  end,
+
   [210] = function (event)
     local x, y, z = event:modelvertexpoint(1, 1):get()
     if x == 8 and y == 68 and z == -32 then return buffs.firelighter, nil end
