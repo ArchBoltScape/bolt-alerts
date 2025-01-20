@@ -270,7 +270,7 @@ local rendericonlookup2 = {
   end,
 
   [1239] = function (event)
-    local r, g, b, _ = event:modelvertexcolour(1, 1)
+    local r, g, b, _ = event:modelvertexcolour(2, 1)
     if rougheqrgb(r, g, b, 16, 169, 174) then return buffs.pulsecore, nil end
     if rougheqrgb(r, g, b, 155, 45, 14) then return buffs.cindercore, nil end
     return nil, nil
