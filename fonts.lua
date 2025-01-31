@@ -21,6 +21,10 @@ return {
         letter = letter[event:texturedata(ax, ay + 22, aw * 4)]
       end
       if not letter then break end
+      local xleft, _ = event:vertexxy(i + 2)
+      if anytext and ((xleft ~= lastx) or (y ~= lasty)) then
+        text = text .. " "
+      end
       text = text .. letter
       anytext = true
       lastx = x
