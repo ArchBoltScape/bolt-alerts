@@ -324,6 +324,8 @@ local lastxpgaintime = bolt.time()
 local lastxpcheck = bolt.time()
 local xpcheckinterval = 100000 -- ten times per second
 local docheckxpgain = false
+local popupfound = false
+local lastpopupmessage = nil
 bolt.onrender2d(function (event)
   local t = bolt.time()
   if not (checkframe or docheckxpgain) then return end
@@ -384,7 +386,14 @@ bolt.onrender2d(function (event)
       elseif aw == 10 and ah == 11 then
         local p = popupmessageimages[event:texturedata(ax, ay + 6, aw * 4)]
         if p then
-          local s = fonts:tryreadpopup(event, i + verticesperimage)
+          local message = fonts:tryreadpopup(event, i + verticesperimage)
+          if message then
+            popupfound = true
+            if message ~= lastpopupmessage then
+              lastpopupmessage = message
+              --print(string.format("new popup: '%s'", message))
+            end
+          end
         end
       elseif aw == 106 and ah == 4 then
         local bar = statbars[event:texturedata(ax, ay, 106 * 4)]
@@ -457,6 +466,10 @@ bolt.onswapbuffers(function (event)
         buff.active = false
       end
     end
+    if not popupfound then
+      lastpopupmessage = nil
+    end
+    popupfound = false
     checkframe = false
   end
 
