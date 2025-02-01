@@ -218,11 +218,7 @@ return {
     -- call the callback with each new message, noting that we added them in reverse order
     -- because the engine renders messages most-recent-first
     while newmessagecount > 0 do
-      local msg = newmessages[newmessagecount]
-      local match, index = string.find(msg, "^%[%d%d:%d%d:%d%d%]")
-      if match then
-        callback(msg, string.sub(msg, index + 1))
-      end
+      callback(newmessages[newmessagecount])
       newmessagecount = newmessagecount - 1
     end
   end,
