@@ -1267,8 +1267,4 @@ return {
       },
     },
   },
-  --const convertstr = (s) => { let out = ""; for(x of s) { const c = x.charCodeAt(0); if (c < 16) out += "\\x0".concat(c.toString(16)); else out += "\\x".concat(c.toString(16)); }; return out; }
-  --const f = (str1, entityindex, firstindex, pt) => { let out = ""; for (let i = 0; i < str1.length; i += 1) { const v = entities[entityindex].vertices[firstindex + (i * 12)]; const c = str1.charAt(i); out += `['${c}-${pt}'] = {\n`; for (let j = 0; j < v.ah; j += 1) { out += ` [${j}] = "${getPixelRow(textures[58], v, j)}",\n`; } out += "},\n"; } return out; };
 }
-
---console.log(f(str1, ent, firstindex1, pt) + f(str2, ent, firstindex1 - 804, pt))
