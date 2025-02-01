@@ -404,13 +404,12 @@ bolt.onrender2d(function (event)
           bar.fraction = (x2 - (x1 + 1)) / 82.0
         end
       elseif aw == 13 and ah == 10 and event:texturecompare(ax, ay + 5, "\x4d\x4c\x4c\xff\xca\xca\xca\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xca\xca\xca\xff\xca\xca\xca\xff\xca\xca\xca\xff\xaf\xaf\xaf\xff\xaf\xaf\xaf\xff\x2f\x2d\x2b\xff") then
-        local t1 = bolt.time()
-        fonts:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
+        if fonts:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
           mostrecentmessage = message
           --print(string.format("new chat message: '%s'", message))
-        end)
-        local t2 = bolt.time()
-        print(string.format("read chat in %s microseconds", t2 - t1))
+        end) then
+          print("warning: can't read chat because it's scrolled too far up")
+        end
       end
     end
 
