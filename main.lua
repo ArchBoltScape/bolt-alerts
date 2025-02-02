@@ -18,16 +18,30 @@ local models = {
   firespirit = {center = bolt.point(0, 300, 0), boxsize = 310, boxthickness = 105}, -- normal and divine
 }
 
--- table of rule groups that determine how each rule should alert
-local rulegroups = {
-  {
-    alert = false,
-    flashwindow = true,
-  },
-  {
-    alert = false,
-    flashwindow = true,
-  },
+local buffcomparators = {
+  lessthan = function (rule, buff)
+    return not buff.foundoncheckframe or buff.number == nil or buff.number < rule.number
+  end,
+  greaterthan = function (rule, buff)
+    return buff.foundoncheckframe and buff.number and buff.number > rule.number
+  end,
+  parenslessthan = function (rule, buff)
+    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber < rule.number
+  end,
+  parensgreaterthan = function (rule, buff)
+    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber > rule.number
+  end,
+  active = function (_, buff)
+    return buff.foundoncheckframe
+  end,
+  inactive = function (_, buff)
+    return not buff.foundoncheckframe
+  end,
+}
+
+-- table of rulesets that determine how each rule should alert.
+-- the "ruleset" member of each individual rule will reference one of the objects in this table.
+local rulesets = {
   {
     alert = false,
     flashwindow = true,
@@ -38,32 +52,28 @@ local rulegroups = {
   },
 }
 
--- table of the rules that determine when to alert
+-- table of the rules that determine when to alert.
 -- types of rule so far: afktimer, buff, stat, xpgain, chat, popup, model
 local rules = {
   {
-    group = rulegroups[1],
-    type = "afktimer",
-    micros = 810 * 1000 * 1000,
+    ruleset = rulesets[1],
+    type = "model",
+    model = models.serenspirit,
     alert = false,
   },
   {
-    group = rulegroups[2],
-    type = "buff",
-    name = "poisonous",
-    conditiontype = "lessthan",
-    number = 10,
-    alert = false,
+    ruleset = rulesets[1],
+    type = "chat",
+    find = "^ASerenspiritappears,",
   },
   {
-    group = rulegroups[3],
-    type = "buff",
-    name = "elderoverload",
-    conditiontype = "inactive",
-    alert = false,
+    ruleset = rulesets[1],
+    type = "popup",
+    find = "^ASerenspiritappears,",
   },
+  
   {
-    group = rulegroups[4],
+    ruleset = rulesets[2],
     type = "chat",
     find = "^Agoldenbeam",
   },
@@ -184,10 +194,10 @@ local popupmessageimages = {
 local alertbyrule = function (rule)
   if rule.alert then return end
   if rule.alert ~= nil then rule.alert = true end
-  local group = rule.group
-  if group.alert then return end
-  group.alert = true
-  if group.flashwindow then bolt.flashwindow() end
+  local ruleset = rule.ruleset
+  if ruleset.alert then return end
+  ruleset.alert = true
+  if ruleset.flashwindow then bolt.flashwindow() end
 end
 
 local any3dobjectexists = false
@@ -639,34 +649,14 @@ local endcheckframe = function (t)
     lastpopupmessage = nil
   end
 
-  for _, group in ipairs(rulegroups) do
-    group.alert = false
+  for _, ruleset in ipairs(rulesets) do
+    ruleset.alert = false
   end
 
   for _, rule in ipairs(rules) do
     if rule.type == "buff" then
       local buff = buffs[rule.name]
-      local functions = {
-        ["lessthan"] = function (rule, buff)
-          return not buff.foundoncheckframe or buff.number == nil or buff.number < rule.number
-        end,
-        ["greaterthan"] = function (rule, buff)
-          return buff.foundoncheckframe and buff.number and buff.number > rule.number
-        end,
-        ["parenslessthan"] = function (rule, buff)
-          return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber < rule.number
-        end,
-        ["parensgreaterthan"] = function (rule, buff)
-          return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber > rule.number
-        end,
-        ["active"] = function (rule, buff)
-          return buff.foundoncheckframe
-        end,
-        ["inactive"] = function (rule, buff)
-          return not buff.foundoncheckframe
-        end,
-      }
-      if functions[rule.conditiontype](rule, buff) then alertbyrule(rule) end
+      if rule:comparator(buff) then alertbyrule(rule) end
     elseif rule.type == "stat" then
       local stat = stats[rule.stat]
       if stat.fraction < rule.threshold then
@@ -691,7 +681,7 @@ local endcheckframe = function (t)
     end
 
     if rule.alert then
-      rule.group.alert = true
+      rule.ruleset.alert = true
     end
   end
 
