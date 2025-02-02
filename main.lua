@@ -10,6 +10,57 @@ local checkinterval = 500000 -- check twice per second
 local redpixel = bolt.createsurfacefromrgba(1, 1, "\xD0\x10\x10\xFF")
 local blackpixel = bolt.createsurfacefromrgba(1, 1, "\x00\x00\x00\xFF")
 
+-- table of rule groups that determine how each rule should alert
+local rulegroups = {
+  [1] = {
+    alert = false,
+    flashwindow = true,
+  },
+  [2] = {
+    alert = false,
+    flashwindow = true,
+  },
+  [3] = {
+    alert = false,
+    flashwindow = true,
+  },
+  [4] = {
+    alert = false,
+    flashwindow = true,
+  },
+}
+
+-- table of the rules that determine when to alert
+-- types of rule so far: afktimer, buff, stat, xpgain, chat, popup
+local rules = {
+  {
+    group = rulegroups[1],
+    type = "afktimer",
+    micros = 810 * 1000 * 1000,
+    alert = false,
+  },
+  {
+    group = rulegroups[2],
+    type = "buff",
+    name = "poisonous",
+    conditiontype = "lessthan",
+    number = 10,
+    alert = false,
+  },
+  {
+    group = rulegroups[3],
+    type = "buff",
+    name = "elderoverload",
+    conditiontype = "inactive",
+    alert = false,
+  },
+  {
+    group = rulegroups[4],
+    type = "chat",
+    find = "^Agoldenbeam",
+  },
+}
+
 -- both buffs and debuffs go in this table
 local buffs = {
   pulsecore = {},
@@ -30,6 +81,17 @@ local buffs = {
   porter = {},
   signoflife = {},
   wiseperk = {},
+  darkness = {}, -- todo:
+  animatedead = {}, -- todo:
+  noexcalibur = {}, -- todo:
+  noritualshard = {}, -- todo:
+
+  powderofburials = {}, -- todo:
+  powderofpenance = {}, -- todo:
+  powderofitemprotection = {}, -- todo:
+  powderofprotection = {}, -- todo:
+  powderofpulverising = {}, -- todo:
+  powderofdefence = {}, -- todo:
 
   incenseavantoe = {},
   incensecadantine = {},
@@ -118,6 +180,15 @@ local popupmessageimages = {
   -- red
   ["\x0a\x0a\x0a\xc5\x0a\x0a\x0a\xc9\x00\x00\x01\xcc\x00\x00\x01\xd3\x00\x00\x01\xd9\x00\x00\x01\xda\x00\x00\x01\xd9\xa9\x18\x18\xff\xa9\x18\x18\xff\x00\x00\x01\x71"] = 2,
 }
+
+local alertbyrule = function (rule)
+  if rule.alert then return end
+  if rule.alert ~= nil then rule.alert = true end
+  local group = rule.group
+  if group.alert then return end
+  group.alert = true
+  if group.flashwindow then bolt.flashwindow() end
+end
 
 local any3dobjectexists = false
 local any3dobjectfound = false
@@ -321,6 +392,7 @@ end
 
 local lastxpplusheight = nil
 local lastxpgaintime = bolt.time()
+local didgainxp = false
 local lastxpcheck = bolt.time()
 local xpcheckinterval = 100000 -- ten times per second
 local docheckxpgain = false
@@ -393,7 +465,11 @@ bolt.onrender2d(function (event)
             popupfound = true
             if message ~= lastpopupmessage then
               lastpopupmessage = message
-              --print(string.format("new popup: '%s'", message))
+              for _, rule in pairs(rules) do
+                if rule.type == "popup" and string.find(message, rule.find) then
+                  alertbyrule(rule)
+                end
+              end
             end
           end
         end
@@ -408,7 +484,12 @@ bolt.onrender2d(function (event)
         local ischat, isscrolled = fonts:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
           mostrecentmessage = message
           if string.find(message, "^%[%d%d:%d%d:%d%d%]") then
-            print(string.format("new chat message: '%s'", string.sub(message, 11)))
+            local msg = string.sub(message, 11)
+            for ruleindex, rule in ipairs(rules) do
+              if rule.type == "chat" and string.find(msg, rule.find) then
+                alertbyrule(rule)
+              end
+            end
           end
         end)
         if ischat then
@@ -427,6 +508,7 @@ bolt.onrender2d(function (event)
       if ((not lastxpplusheight) or (lastxpplusheight <= y)) and (r < lowestcolour and g < lowestcolour and b < lowestcolour) then
         lastxpplusheight = y
         lastxpgaintime = t
+        didgainxp = true
       end
     end
   end
@@ -469,37 +551,104 @@ bolt.onmousebutton(function (event)
   lastnonafkaction = bolt.time()
 end)
 
+local startcheckframe = function (t)
+  for _, buff in pairs(buffs) do
+    buff.foundoncheckframe = false
+  end
+
+  for _, rule in ipairs(rules) do
+    if rule.type == "chat" then
+      -- enable chat-reading for this frame only if we have any rules that require it,
+      -- because reading chat is computationally expensive (can take upwards of 0.4 millis on my pc)
+      -- and we don't want to spend that twice-per-second for no reason
+      checkchat = true
+    elseif rule.type == "afktimer" then
+      if t - lastnonafkaction >= rule.micros then
+        alertbyrule(rule)
+      else
+        rule.alert = false
+      end
+    end
+  end
+end
+
+local endcheckframe = function (t)
+  for _, buff in pairs(buffs) do
+    if not buff.foundoncheckframe then
+      buff.active = false
+    end
+  end
+  if not popupfound then
+    lastpopupmessage = nil
+  end
+
+  for _, rule in ipairs(rules) do
+    if rule.type == "buff" then
+      local buff = buffs[rule.name]
+      local functions = {
+        ["lessthan"] = function (rule, buff)
+          return not buff.foundoncheckframe or buff.number == nil or buff.number < rule.number
+        end,
+        ["greaterthan"] = function (rule, buff)
+          return buff.foundoncheckframe and buff.number and buff.number > rule.number
+        end,
+        ["parenslessthan"] = function (rule, buff)
+          return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber < rule.number
+        end,
+        ["parensgreaterthan"] = function (rule, buff)
+          return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber > rule.number
+        end,
+        ["active"] = function (rule, buff)
+          return buff.foundoncheckframe
+        end,
+        ["inactive"] = function (rule, buff)
+          return not buff.foundoncheckframe
+        end,
+      }
+      if functions[rule.conditiontype](rule, buff) then alertbyrule(rule) end
+    elseif rule.type == "stat" then
+      local stat = stats[rule.stat]
+      if stat.fraction < rule.threshold then
+        alertbyrule(rule)
+      else
+        rule.alert = false
+      end
+    elseif rule.type == "xpgain" then
+      if rule.istimeout then
+        if t - lastxpgaintime > rule.micros then
+          alertbyrule(rule)
+        else
+          rule.alert = false
+        end
+      elseif didgainxp then
+        alertbyrule(rule)
+      end
+    end
+  end
+
+  didgainxp = false
+  popupfound = false
+end
+
 bolt.onswapbuffers(function (event)
   any3dobjectexists = any3dobjectfound
   any3dobjectfound = false
   nextrender2dbuff = nil
   nextrender2ddebuff = nil
 
+  local t = bolt.time()
   if checkframe then
-    for _, buff in pairs(buffs) do
-      if not buff.foundoncheckframe then
-        buff.active = false
-      end
-    end
-    if not popupfound then
-      lastpopupmessage = nil
-    end
-    popupfound = false
+    endcheckframe(t)
     checkframe = false
   end
 
-  local t = bolt.time()
   if t > checktime + checkinterval then
     checkframe = true
-    checkchat = true
     checktime = checktime + checkinterval
     if checktime < t then
       checktime = t
     end
-
-    for _, buff in pairs(buffs) do
-      buff.foundoncheckframe = false
-    end
+    startcheckframe(t)
   end
 
   if t > lastxpcheck + xpcheckinterval then
