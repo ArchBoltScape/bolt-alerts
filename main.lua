@@ -327,6 +327,7 @@ local docheckxpgain = false
 local popupfound = false
 local lastpopupmessage = nil
 local mostrecentmessage = nil
+local checkchat = true
 bolt.onrender2d(function (event)
   local t = bolt.time()
   if not (checkframe or docheckxpgain) then return end
@@ -403,12 +404,18 @@ bolt.onrender2d(function (event)
           local x1, _ = event:vertexxy(i + 2)
           bar.fraction = (x2 - (x1 + 1)) / 82.0
         end
-      elseif aw == 13 and ah == 10 and event:texturecompare(ax, ay + 5, "\x4d\x4c\x4c\xff\xca\xca\xca\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xca\xca\xca\xff\xca\xca\xca\xff\xca\xca\xca\xff\xaf\xaf\xaf\xff\xaf\xaf\xaf\xff\x2f\x2d\x2b\xff") then
-        if fonts:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
+      elseif checkchat and aw == 13 and ah == 10 and event:texturecompare(ax, ay + 5, "\x4d\x4c\x4c\xff\xca\xca\xca\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xca\xca\xca\xff\xca\xca\xca\xff\xca\xca\xca\xff\xaf\xaf\xaf\xff\xaf\xaf\xaf\xff\x2f\x2d\x2b\xff") then
+        local ischat, isscrolled = fonts:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
           mostrecentmessage = message
-          --print(string.format("new chat message: '%s'", message))
-        end) then
-          print("warning: can't read chat because it's scrolled too far up")
+          if string.find(message, "^%[%d%d:%d%d:%d%d%]") then
+            print(string.format("new chat message: '%s'", string.sub(message, 11)))
+          end
+        end)
+        if ischat then
+          checkchat = false
+          if isscrolled then
+            print("can't read chat because it's scrolled up")
+          end
         end
       end
     end
@@ -484,6 +491,7 @@ bolt.onswapbuffers(function (event)
   local t = bolt.time()
   if t > checktime + checkinterval then
     checkframe = true
+    checkchat = true
     checktime = checktime + checkinterval
     if checktime < t then
       checktime = t

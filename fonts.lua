@@ -129,7 +129,8 @@ return {
   -- when a message matching prevmostrecent is found (which should include the timestamp at the beginning),
   -- stops reading there, without calling the callback for that message.
   -- this function is stateless so it can be safely called more than once per frame for suspected chat locations.
-  -- returns true if chat is scrolled up and can't be read, otherwise nil.
+  -- first return is true if a chat read was attempted, otherwise nil. if nil, the rest of the returned values will also be nil.
+  -- second return is true if chat is scrolled up and can't be read, otherwise nil.
   tryreadchat = function (this, event, startindex, prevmostrecent, callback)
     local vertexcount = event:vertexcount()
     local verticesperimage = event:verticesperimage()
@@ -144,7 +145,7 @@ return {
       if barindex ~= nil and ah == 5 and event:texturecompare(ax, ay + 1, "\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x0e\x16\x1a\xff\xe7\xc2\x42\xff\xf7\xc6\x3e\xff\xf7\xbb\x34\xff\xd8\x94\x18\xff\xca\x81\x0e\xff\xb8\x6f\x09\xff\x0e\x16\x1a\xff\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00") then
         local _, y = event:vertexxy(i)
         if y ~= bararrowtop then
-          return true
+          return true, true
         end
         break
       elseif barindex == nil and ah == 16 and event:texturecompare(ax, ay + 8, "\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x96\x73\x21\x36\xd7\xa0\x2c\xf0\xe1\xa9\x2f\xff\xed\xb4\x33\xff\xf5\xb7\x32\xff\xeb\xa8\x26\xff\xc8\x81\x11\xff\xbb\x73\x0c\xff\xaf\x63\x06\xf0\x75\x41\x04\x36\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00") then
@@ -154,7 +155,7 @@ return {
       end
       ::continue::
     end
-    if barindex == nil then return end
+    if barindex == nil then return nil end
 
     -- try to find the first timestamp
     local firstcharindex = nil
@@ -170,7 +171,7 @@ return {
         break
       end
     end
-    if firstcharindex == nil then return end
+    if firstcharindex == nil then return nil end
 
     -- build a list of new messages, one character at a time, starting a new one when we find a new timestamp
     local newmessages = {}
@@ -221,6 +222,8 @@ return {
       callback(newmessages[newmessagecount])
       newmessagecount = newmessagecount - 1
     end
+
+    return true, nil
   end,
 
   -- lookup table of the 7th row (1-indexed, so y+6) of pixels in each character that can appear written on a buff or debuff.
