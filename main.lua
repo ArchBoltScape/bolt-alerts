@@ -10,28 +10,36 @@ local checkinterval = 500000 -- check twice per second
 local redpixel = bolt.createsurfacefromrgba(1, 1, "\xD0\x10\x10\xFF")
 local blackpixel = bolt.createsurfacefromrgba(1, 1, "\x00\x00\x00\xFF")
 
+-- 3d models that may be of interest
+local models = {
+  lostsoul = {center = bolt.point(0, 600, 0), boxsize = 370, boxthickness = 115}, -- lost/unstable/vengeful
+  penguinagent = {center = bolt.point(0, 200, 0), boxsize = 450, boxthickness = 120}, -- 001 through 007, but not the disguised ones
+  serenspirit = {center = bolt.point(0, 350, 0), boxsize = 400, boxthickness = 100},
+  firespirit = {center = bolt.point(0, 300, 0), boxsize = 310, boxthickness = 105}, -- normal and divine
+}
+
 -- table of rule groups that determine how each rule should alert
 local rulegroups = {
-  [1] = {
+  {
     alert = false,
     flashwindow = true,
   },
-  [2] = {
+  {
     alert = false,
     flashwindow = true,
   },
-  [3] = {
+  {
     alert = false,
     flashwindow = true,
   },
-  [4] = {
+  {
     alert = false,
     flashwindow = true,
   },
 }
 
 -- table of the rules that determine when to alert
--- types of rule so far: afktimer, buff, stat, xpgain, chat, popup
+-- types of rule so far: afktimer, buff, stat, xpgain, chat, popup, model
 local rules = {
   {
     group = rulegroups[1],
@@ -148,14 +156,6 @@ local statbars = {
     = stats.prayer,
   ["\x1f\xac\xa0\x00\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\x00"]
     = stats.summoning,
-}
-
--- 3d models that may be of interest
-local models = {
-  lostsoul = {center = bolt.point(0, 600, 0), boxsize = 370, boxthickness = 115}, -- lost/unstable/vengeful
-  penguinagent = {center = bolt.point(0, 200, 0), boxsize = 450, boxthickness = 120}, -- 001 through 007, but not the disguised ones
-  serenspirit = {center = bolt.point(0, 350, 0), boxsize = 400, boxthickness = 100},
-  firespirit = {center = bolt.point(0, 300, 0), boxsize = 310, boxthickness = 105}, -- normal and divine
 }
 
 local rgbaleniency = 2.5 / 255.0
@@ -564,10 +564,18 @@ bolt.onrender3d(function (event)
   local f = render3dlookup[event:vertexcount()]
   if f ~= nil then
     local model = f(event)
-    if model then
+    if model and model.dohighlight then
       any3dobjectfound = true
       if (bolt.time() % 600000) <= 480000 then
         drawbox(model.center:transform(event:modelmatrix()), event:viewmatrix(), event:projectionmatrix(), model.boxsize, model.boxthickness)
+      end
+      if checkframe then
+        model.foundoncheckframe = true
+        for _, rule in ipairs(rules) do
+          if rule.type == "model" and rule.model == model then
+            alertbyrule(rule)
+          end
+        end
       end
     end
   end
@@ -601,6 +609,10 @@ local startcheckframe = function (t)
     buff.foundoncheckframe = false
   end
 
+  for _, model in pairs(models) do
+    model.foundoncheckframe = false
+  end
+
   for _, rule in ipairs(rules) do
     if rule.type == "chat" then
       -- enable chat-reading for this frame only if we have any rules that require it,
@@ -625,6 +637,10 @@ local endcheckframe = function (t)
   end
   if not popupfound then
     lastpopupmessage = nil
+  end
+
+  for _, group in ipairs(rulegroups) do
+    group.alert = false
   end
 
   for _, rule in ipairs(rules) do
@@ -668,6 +684,14 @@ local endcheckframe = function (t)
       elseif didgainxp then
         alertbyrule(rule)
       end
+    elseif rule.type == "model" then
+      if not rule.model.foundoncheckframe then
+        rule.alert = false
+      end
+    end
+
+    if rule.alert then
+      rule.group.alert = true
     end
   end
 
