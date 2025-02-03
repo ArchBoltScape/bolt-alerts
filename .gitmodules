@@ -1,0 +1,9 @@
+[submodule "modules/chat"]
+	path = modules/chat
+	url = https://github.com/Adamcake/bolt-chatmodule.git
+[submodule "modules/buffs"]
+	path = modules/buffs
+	url = https://github.com/Adamcake/bolt-buffmodule.git
+[submodule "modules/popup"]
+	path = modules/popup
+	url = https://github.com/Adamcake/bolt-popupmodule.git

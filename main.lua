@@ -1,7 +1,11 @@
 local bolt = require("bolt")
 bolt.checkversion(1, 0)
 
-local fonts = require("fonts")
+local modules = {
+  chat = require("modules.chat.chat"),
+  buffs = require("modules.buffs.buffs"),
+  popup = require("modules.popup.popup"),
+}
 
 local checkframe = false
 local checktime = bolt.time()
@@ -502,11 +506,11 @@ bolt.onrender2d(function (event)
   if not (checkframe or docheckxpgain) then return end
 
   if nextrender2dbuff then
-    setbuffdetails(nextrender2dbuff, fonts:tryreadbuffdetails(event, 1, nextrender2dpxleft, nextrender2dpxtop, true))
+    setbuffdetails(nextrender2dbuff, modules.buffs:tryreadbuffdetails(event, 1, nextrender2dpxleft, nextrender2dpxtop, true))
     nextrender2dbuff = nil
   end
   if nextrender2ddebuff then
-    setbuffdetails(nextrender2ddebuff, fonts:tryreadbuffdetails(event, 1, nextrender2dpxleft, nextrender2dpxtop, false))
+    setbuffdetails(nextrender2ddebuff, modules.buffs:tryreadbuffdetails(event, 1, nextrender2dpxleft, nextrender2dpxtop, false))
     nextrender2ddebuff = nil
   end
 
@@ -517,7 +521,7 @@ bolt.onrender2d(function (event)
     if checkframe then
       local pxleft, pxtop = event:vertexxy(i + 2)
       local readbuff = function (buff, isbuff)
-        setbuffdetails(buff, fonts:tryreadbuffdetails(event, i + verticesperimage, pxleft, pxtop, isbuff))
+        setbuffdetails(buff, modules.buffs:tryreadbuffdetails(event, i + verticesperimage, pxleft, pxtop, isbuff))
       end
 
       if aw == ah then
@@ -569,7 +573,7 @@ bolt.onrender2d(function (event)
       elseif aw == 10 and ah == 11 then
         local p = popupmessageimages[event:texturedata(ax, ay + 6, aw * 4)]
         if p then
-          local message = fonts:tryreadpopup(event, i + verticesperimage)
+          local message = modules.popup:tryreadpopup(event, i + verticesperimage)
           if message then
             popupfound = true
             if message ~= lastpopupmessage then
@@ -590,7 +594,7 @@ bolt.onrender2d(function (event)
           bar.fraction = (x2 - (x1 + 1)) / 82.0
         end
       elseif checkchat and aw == 13 and ah == 10 and event:texturecompare(ax, ay + 5, "\x4d\x4c\x4c\xff\xca\xca\xca\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xca\xca\xca\xff\xca\xca\xca\xff\xca\xca\xca\xff\xaf\xaf\xaf\xff\xaf\xaf\xaf\xff\x2f\x2d\x2b\xff") then
-        local ischat, isscrolled = fonts:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
+        local ischat, isscrolled = modules.chat:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
           mostrecentmessage = message
           if string.find(message, "^%[%d%d:%d%d:%d%d%]") then
             local msg = string.sub(message, 11)
