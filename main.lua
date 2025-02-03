@@ -478,6 +478,15 @@ local function drawbox (worldpoint, viewmatrix, projmatrix, boxradius, boxthickn
   blackpixel:drawtoscreen(0, 0, 1, 1, left + edgew, bottom - (edgeh + 1), width - (edgew * 2), 1) -- bottom
 end
 
+local setbuffdetails = function (buff, isvalid, number, parensnumber)
+  if isvalid then
+    buff.number = number
+    buff.parensnumber = parensnumber
+    buff.active = true
+    buff.foundoncheckframe = true
+  end
+end
+
 local lastxpplusheight = nil
 local lastxpgaintime = bolt.time()
 local didgainxp = false
@@ -493,11 +502,11 @@ bolt.onrender2d(function (event)
   if not (checkframe or docheckxpgain) then return end
 
   if nextrender2dbuff then
-    fonts:tryreadbuffdetails(event, 1, nextrender2dbuff, nextrender2dpxleft, nextrender2dpxtop, true)
+    setbuffdetails(nextrender2dbuff, fonts:tryreadbuffdetails(event, 1, nextrender2dpxleft, nextrender2dpxtop, true))
     nextrender2dbuff = nil
   end
   if nextrender2ddebuff then
-    fonts:tryreadbuffdetails(event, 1, nextrender2ddebuff, nextrender2dpxleft, nextrender2dpxtop, false)
+    setbuffdetails(nextrender2ddebuff, fonts:tryreadbuffdetails(event, 1, nextrender2dpxleft, nextrender2dpxtop, false))
     nextrender2ddebuff = nil
   end
 
@@ -508,7 +517,7 @@ bolt.onrender2d(function (event)
     if checkframe then
       local pxleft, pxtop = event:vertexxy(i + 2)
       local readbuff = function (buff, isbuff)
-        return fonts:tryreadbuffdetails(event, i + verticesperimage, buff, pxleft, pxtop, isbuff)
+        setbuffdetails(buff, fonts:tryreadbuffdetails(event, i + verticesperimage, pxleft, pxtop, isbuff))
       end
 
       if aw == ah then
@@ -669,7 +678,7 @@ local startcheckframe = function (t)
   end
 
   for _, rule in ipairs(rules) do
-    if rule.type == "chat" then
+    if rule.type == "chat" then -- todo:
       -- enable chat-reading for this frame only if we have any rules that require it,
       -- because reading chat is computationally expensive (can take upwards of 0.4 millis on my pc)
       -- and we don't want to spend that twice-per-second for no reason

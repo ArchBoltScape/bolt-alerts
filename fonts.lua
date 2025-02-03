@@ -37,7 +37,12 @@ return {
     return text
   end,
 
-  tryreadbuffdetails = function (this, event, startindex, buff, pxleft, pxtop, isbuff)
+  -- startindex should be the index immediately after the image that's suspected of being a buff,
+  -- or 1 if the suspected buff was seen in a previous event (i.e. onrendericon).
+  -- first return is true if it's actually a buff, false if not.
+  -- if true, second return will be the number shown on the buff (or nil if no number is shown),
+  -- and third return will be the number shown after that in parentheses (or nil if none).
+  tryreadbuffdetails = function (this, event, startindex, pxleft, pxtop, isbuff)
     local vertexcount = event:vertexcount()
     local verticesperimage = event:verticesperimage()
     local buffnumber = nil
@@ -60,21 +65,17 @@ return {
         local x, y = event:vertexxy(i + 2)
         local fr, fg, fb = event:vertexcolour(i)
         if x == pxleft and y == pxtop and roundcol(fr) == boxr and roundcol(fg) == boxg and roundcol(fb) == boxb then
-          buff.foundoncheckframe = true
-          buff.active = true
-          buff.number = buffnumber
-          buff.parensnumber = parensnumber
-          --print(string.format("buff name=%s number=%s", buff.name, buffnumber))
+          return true, buffnumber, parensnumber
         end
-        return nil
+        return false
       end
 
-      if ah <= 6 then return nil end
+      if ah <= 6 then return false end
       local char = this.buffchars[event:texturedata(ax, ay + 6, aw * 4)]
       if type(char) == "table" then
         char = char[event:texturedata(ax, ay + 1, aw * 4)]
       end
-      if not char then return nil end
+      if not char then return false end
       skipnumber = true
 
       if type(char) == "number" then
@@ -104,6 +105,7 @@ return {
       end
       ::continue::
     end
+    return false
   end,
 
   lookupchatcharacter = function (this, event, ax, ay, aw, ah)
@@ -114,15 +116,13 @@ return {
     end
   end,
 
-  roundcol = function (c) return math.floor((c * 255.0) + 0.5) end,
-
   chatindexcouldbetimestamp = function (this, event, index, ax, ay, aw, ah)
     local verticesperimage = event:verticesperimage()
     local char = this:lookupchatcharacter(event, ax, ay, aw, ah)
     if char ~= '[' then return false end
     local r, g, b, _ = event:vertexcolour(index + verticesperimage)
     local r2, g2, b2, _ = event:vertexcolour(index + (verticesperimage * 3))
-    return this.roundcol(r) == 255 and this.roundcol(g) == 255 and this.roundcol(b) == 255 and this.roundcol(r2) == 127 and this.roundcol(g2) == 169 and this.roundcol(b2) == 255
+    return roundcol(r) == 255 and roundcol(g) == 255 and roundcol(b) == 255 and roundcol(r2) == 127 and roundcol(g2) == 169 and roundcol(b2) == 255
   end,
 
   -- calls the callback for any new messages, in order of arrival.
