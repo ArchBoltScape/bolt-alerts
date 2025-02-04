@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="index.js"></script>
+    <link rel="stylesheet" href="index.css">
+  </head>
+  <body>
+    <div class="grid">
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=-1&v=-1')"></div>
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=0&v=-1')"></div>
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=1&v=-1')"></div>
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=-1&v=0')"></div>
+      <div style="pointer-events:none;"></div>
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=1&v=0')"></div>
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=-1&v=1')"></div>
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=0&v=1')"></div>
+      <div class="border" onmousedown="fetch('https://bolt-api/start-reposition?h=1&v=1')"></div>
+    </div>
+
+    <div style="margin:4px;">
+      <div class="titleobject titlebutton" onclick="fetch('https://bolt-api/close-request')">
+        <p class="titleobject titletext">X</p>
+      </div>
+      <div class="titlebar" onmousedown="fetch('https://bolt-api/start-reposition?h=0&v=0')">
+        <p class="titleobject titletext">Alerts</p>
+      </div>
+      <div id="app" style="position:fixed;top:4px;">
+        <!-- for testing: -->
+        <p id="text">Loading...</p>
+      </div>
+    </div>
+  </body>
+</html>

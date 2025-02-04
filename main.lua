@@ -1,6 +1,10 @@
 local bolt = require("bolt")
 bolt.checkversion(1, 0)
 
+local browser = bolt.createembeddedbrowser(0, 0, 250, 180, "file://app/index.html")
+browser:oncloserequest(bolt.close)
+browser:sendmessage("Hello World")
+
 local modules = {
   chat = require("modules.chat.chat"),
   buffs = require("modules.buffs.buffs"),
