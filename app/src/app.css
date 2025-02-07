@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+body {
+  background-color: hsl(34, 78%, 91%);
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
