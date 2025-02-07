@@ -1,13 +1,38 @@
 local bolt = require("bolt")
 bolt.checkversion(1, 0)
 
-local browser = bolt.createembeddedbrowser(0, 0, 250, 180, "plugin://app/dist/index.html")
+local cfgname = "config.ini"
+local cfg = {}
+
+(function ()
+  local cfgstring = bolt.loadconfig(cfgname)
+  if cfgstring ~= nil then
+    for k, v in string.gmatch(cfgstring, "(%w+)=(%w+)") do
+      cfg[k] = v
+    end
+  end
+end)()
+
+local function saveconfig ()
+  local cfgstring = ""
+  for k, v in pairs(cfg) do
+    cfgstring = string.format("%s%s=%s\n", cfgstring, k, tostring(v))
+  end
+  bolt.saveconfig(cfgname, cfgstring)
+end
+
+local browser = bolt.createembeddedbrowser(cfg.windowx or 0, cfg.windowy or 0, cfg.windoww or 250, cfg.windowh or 180, "plugin://app/dist/index.html")
 --browser:showdevtools()
 browser:oncloserequest(bolt.close)
 
---browser:onreposition(function (event)
---  print("onreposition")
---end)
+browser:onreposition(function (event)
+  local x, y, w, h = event:xywh()
+  cfg.windowx = x
+  cfg.windowy = y
+  cfg.windoww = w
+  cfg.windowh = h
+  saveconfig()
+end)
 
 local modules = {
   chat = require("modules.chat.chat"),
