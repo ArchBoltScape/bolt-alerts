@@ -1,6 +1,9 @@
 local bolt = require("bolt")
 bolt.checkversion(1, 0)
 
+local base64 = require("base64")
+
+local alertsfilename = "alerts.json"
 local cfgname = "config.ini"
 local cfg = {}
 
@@ -21,9 +24,50 @@ local function saveconfig ()
   bolt.saveconfig(cfgname, cfgstring)
 end
 
-local browser = bolt.createembeddedbrowser(cfg.windowx or 0, cfg.windowy or 0, cfg.windoww or 250, cfg.windowh or 180, "plugin://app/dist/index.html")
---browser:showdevtools()
+local browser = (function ()
+  local alertsstring = bolt.loadconfig(alertsfilename)
+  local url = "plugin://app/dist/index.html"
+  if alertsstring ~= nil then
+    url = url .. '?list=' .. base64.encode(alertsstring)
+  end
+  return bolt.createembeddedbrowser(cfg.windowx or 0, cfg.windowy or 0, cfg.windoww or 250, cfg.windowh or 180, url)
+end)()
+browser:showdevtools()
 browser:oncloserequest(bolt.close)
+
+local messagehandlers = {
+  [1] = function (message)
+    -- open "new ruleset" menu
+    local menubrowser = bolt.createbrowser(270, 450, "plugin://app/dist/ruleset.html")
+    menubrowser:onmessage(function (message)
+      browser:sendmessage(message)
+      menubrowser:close()
+    end)
+    menubrowser:oncloserequest(function () menubrowser:close() end)
+  end,
+
+  [2] = function (message)
+    -- open "edit ruleset" menu
+    local menubrowser = bolt.createbrowser(270, 450, "plugin://app/dist/ruleset.html?" .. string.sub(message, 3))
+    menubrowser:onmessage(function (message)
+      browser:sendmessage(message)
+      menubrowser:close()
+    end)
+    menubrowser:oncloserequest(function () menubrowser:close() end)
+  end,
+
+  [3] = function (message)
+    -- save alerts file
+    local filecontents = string.sub(message, 3)
+    bolt.saveconfig(alertsfilename, filecontents)
+  end,
+}
+
+browser:onmessage(function (message)
+  local msgtype = bolt.buffergetuint16(message, 0)
+  local handler = messagehandlers[msgtype]
+  if handler then handler(message) end
+end)
 
 browser:onreposition(function (event)
   local x, y, w, h = event:xywh()
@@ -59,16 +103,16 @@ local models = {
 
 local buffcomparators = {
   lessthan = function (rule, buff)
-    return not buff.foundoncheckframe or buff.number == nil or buff.number < rule.number
+    return not buff.foundoncheckframe or buff.number == nil or buff.number < rule.threshold
   end,
   greaterthan = function (rule, buff)
-    return buff.foundoncheckframe and buff.number and buff.number > rule.number
+    return buff.foundoncheckframe and buff.number and buff.number > rule.threshold
   end,
   parenslessthan = function (rule, buff)
-    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber < rule.number
+    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber < rule.threshold
   end,
   parensgreaterthan = function (rule, buff)
-    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber > rule.number
+    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber > rule.threshold
   end,
   active = function (_, buff)
     return buff.foundoncheckframe
@@ -154,12 +198,35 @@ local buffs = {
   archaeologiststea = {},
 }
 
--- table of rulesets that determine how each rule should alert.
--- the "ruleset" member of each individual rule will reference one of the objects in this table.
+-- table of rulesets that determine how each rule should alert
 local rulesets = {}
 
 -- table of the rules that determine when to alert.
--- types of rule so far: afktimer, buff, stat, xpgain, chat, popup, model
+-- every rule has a "ruleset" value which is one of the objects in the "ruleset" table.
+-- types of rule and their values (other than the "ruleset" value):
+-- afktimer:
+-- - alert: whether the timer is currently past the configured threshold (micros)
+-- - threshold: time threshold, in microseconds, after which to alert the player
+-- buff:
+-- - alert: whether the alert condition is currently met
+-- - ref: one of the entries in the buffs table
+-- - comparator: one of the functions in the buffcomparators table
+-- - threshold: the value that the actual buff timer will be compared to by comparators (except active and inactive, which ignore this value)
+-- chat:
+-- - find: the lua pattern string that each new chat message will be compared to, sending an alert if it matches
+-- model:
+-- - alert: whether the model is currently on-screen
+-- - ref: one of the entries in the models table
+-- popup:
+-- - find: the lua pattern string that each new popup message will be compared to, sending an alert if it matches
+-- stat:
+-- - alert: whether the alert condition is currently met
+-- - ref: one of the entries in the stats table
+-- - threshold: a number between 0.0 and 1.0, for which an alert will be sent if the stat falls below this fraction
+-- xpgain:
+-- - alert: whether the timeout is currently met, if istimeout = true, otherwise unused
+-- - istimeout: if true, this rule alerts after a certain amount of time with no xp gain, otherwise it alerts immediately on xp gain
+-- - threshold: the timeout in microseconds for istimeout rules
 local rules = {}
 
 local nextrender2dbuff = nil
@@ -673,7 +740,7 @@ bolt.onrender3d(function (event)
       if checkframe then
         model.foundoncheckframe = true
         for _, rule in ipairs(rules) do
-          if rule.type == "model" and rule.model == model then
+          if rule.type == "model" and rule.ref == model then
             alertbyrule(rule)
           end
         end
@@ -715,13 +782,13 @@ local startcheckframe = function (t)
   end
 
   for _, rule in ipairs(rules) do
-    if rule.type == "chat" then -- todo:
+    if rule.type == "chat" then
       -- enable chat-reading for this frame only if we have any rules that require it,
       -- because reading chat is computationally expensive (can take upwards of 0.4 millis on my pc)
       -- and we don't want to spend that twice-per-second for no reason
       checkchat = true
     elseif rule.type == "afktimer" then
-      if t - lastnonafkaction >= rule.micros then
+      if t - lastnonafkaction >= rule.threshold then
         alertbyrule(rule)
       else
         rule.alert = false
@@ -746,10 +813,10 @@ local endcheckframe = function (t)
 
   for _, rule in ipairs(rules) do
     if rule.type == "buff" then
-      local buff = rule.buff
+      local buff = rule.ref
       if rule:comparator(buff) then alertbyrule(rule) end
     elseif rule.type == "stat" then
-      local stat = stats[rule.stat]
+      local stat = stats[rule.ref]
       if stat.fraction < rule.threshold then
         alertbyrule(rule)
       else
@@ -757,7 +824,7 @@ local endcheckframe = function (t)
       end
     elseif rule.type == "xpgain" then
       if rule.istimeout then
-        if t - lastxpgaintime > rule.micros then
+        if t - lastxpgaintime > rule.threshold then
           alertbyrule(rule)
         else
           rule.alert = false
@@ -766,7 +833,7 @@ local endcheckframe = function (t)
         alertbyrule(rule)
       end
     elseif rule.type == "model" then
-      if not rule.model.foundoncheckframe then
+      if not rule.ref.foundoncheckframe then
         rule.alert = false
       end
     end
