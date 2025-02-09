@@ -4,20 +4,28 @@
     let ruleTypeParam = params.get('type');
     let numberParam = params.get('number');
 
-    let afkTimeoutValue: number;
-    let matchTypeIsExact: boolean = true;
-    let findExactValue: string;
-    let statThresholdValue: number;
-    let xpGainModeIsTimeout: boolean | null = null;
-    let xpGainTimeoutValue: number;
-
     let id: string | null = params.get('id');
     let rulesetId: string = params.get('ruleset_id')!;
     let ruleType: RuleType | null = ruleTypeParam ? (ruleTypeParam as RuleType) : null;
     let number: number | null = numberParam ? parseInt(numberParam) : null;
     let ref: string | null = params.get('ref');
     let comparator: string | null = params.get('comparator');
-    let find: string | null = params.get('comparator');
+    let find: string | null = params.get('find');
+
+    let afkTimeoutValue: number;
+    let matchTypeIsExact: boolean = find === null;
+    let findExactValue: string;
+    let statThresholdValue: number;
+    let xpGainModeIsTimeout: boolean | null = null;
+    let xpGainTimeoutValue: number;
+
+    if (ruleType === RuleType.afktimer && number) {
+        afkTimeoutValue = Math.floor(number / 1000000.0);
+    } else if (ruleType === RuleType.stat && number) {
+        statThresholdValue = Math.floor(number / 100.0);
+    } else if (ruleType === RuleType.xpgain && number) {
+        xpGainTimeoutValue = Math.floor(number / 1000000.0);
+    }
 
     $: valid =
         (ruleType === RuleType.afktimer && number !== null) ||
@@ -58,10 +66,20 @@
         }
     };
 
-    const save = () => {
-        // TODO:
-    };
+    const getPostBody = () => {
+        let params: Record<string, string> = {
+            ruleset_id: rulesetId,
+            type: ruleType!,
+        };
+        if (id) params['id'] = id;
+        if (number) params['number'] = number.toString();
+        if (ref) params['ref'] = ref;
+        if (comparator) params['comparator'] = comparator;
+        if (find) params['find'] = find;
+        return '\x02\x00'.concat(new URLSearchParams(params).toString());
+    }
 
+    const save = () => fetch("https://bolt-api/send-message", {method: 'POST', body: getPostBody()});
     const cancel = () => fetch("https://bolt-api/close-request");
 </script>
 
