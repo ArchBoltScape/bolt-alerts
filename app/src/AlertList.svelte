@@ -192,7 +192,7 @@
 
 <div>
     {#each Object.values($list) as ruleset, i}
-        <div class={i & 1 ? "relative w-full bg-gray-200 b-0 text-[8pt]" : "relative w-full bg-gray-300 b-0 text-[8pt]"}>
+        <div class={"relative w-full text-[8pt] ".concat(ruleset.alert ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
             {#if ruleset.expanded}
                 <button class="h-[14px] w-[14px] pointer-events-auto" onclick={() => setExpanded(ruleset, false)}><img src="plugin://app/images/caret-down-solid.svg" class="w-full h-full" alt="Hide" /></button>
             {:else}
@@ -223,7 +223,7 @@
         </div>
         {#if ruleset.expanded}
             {#each Object.values(ruleset.rules) as rule}
-                <div class={i & 1 ? "relative w-full bg-gray-200 b-0 text-[8pt]" : "relative w-full bg-gray-300 b-0 text-[8pt]"}>
+                <div class={"relative px-1 w-full text-[8pt] ".concat(rule.alert ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
                     {getRuleDescription(rule)}
                     <button
                         class="absolute rounded-lg right-0 top-0 h-[18px] w-[18px] hover:bg-red-500 pointer-events-auto py-0 by-0"

@@ -67,7 +67,7 @@
     <div class="m-0 p-0 border-b border-black absolute left-[5px] top-[5px] right-[23px] h-[19px] bg-[grey] text-center text-[10pt]" onmousedown={(e) => {if (e.button === 0) startDrag('0', '0')}}>
       <p class="m-0 p-0 color-black select-none pointer-events-none">Alerts</p>
     </div>
-    <div class="fixed top-[24px] bottom-[6px] left-[6px] right-[6px] text-[10pt] pointer-events-none">
+    <div class="fixed top-[24px] bottom-[6px] left-[5px] right-[5px] text-[10pt] pointer-events-none">
       <AlertList bind:list={alertList} />
     </div>
   </div>
