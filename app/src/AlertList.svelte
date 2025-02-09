@@ -3,7 +3,66 @@
     import { get, type Writable } from 'svelte/store';
     import { v4 as randomUUID } from 'uuid';
 
-    const params = new URLSearchParams(window.location.search);
+    const writeRulesetsToBuffer = (list: Ruleset[], buffer: DataView | null) => {
+        let cursor = 0;
+
+        const writeBool = (b: boolean) => {
+            if (buffer) buffer.setUint8(cursor, b ? 1 : 0);
+            cursor += 1;
+        };
+
+        const writeUint = (n: number) => {
+            if (buffer) buffer.setUint32(cursor, n, true);
+            cursor += 4;
+        };
+
+        const writeInt = (n: number) => {
+            if (buffer) buffer.setInt32(cursor, n, true);
+            cursor += 4;
+        };
+
+        const writeString = (s: string) => {
+            // is there a better way to do this?
+            const array = new TextEncoder().encode(s);
+            writeUint(s.length);
+            if (buffer) {
+                for (let i = 0; i < array.byteLength; i += 1) {
+                    buffer.setUint8(cursor + i, array[i]);
+                }
+            }
+            cursor += array.byteLength;
+        };
+
+        writeUint(list.length);
+        for (const ruleset of list) {
+            writeString(ruleset.id);
+            writeBool(ruleset.alert);
+            writeBool(ruleset.doFlashWindow);
+            writeBool(ruleset.onlyIfUnfocused);
+            writeUint(Object.keys(ruleset.rules).length);
+            for (const rule of Object.values(ruleset.rules)) {
+                writeString(rule.id);
+                writeString(rule.ruletype);
+                const hasAlert = typeof(rule.alert) === 'boolean';
+                const hasNumber = typeof(rule.number) === 'number';
+                const hasRef = typeof(rule.ref) === 'string';
+                const hasComparator = typeof(rule.comparator) === 'string';
+                const hasFind = typeof(rule.find) === 'string';
+                writeBool(hasAlert);
+                if (hasAlert) writeBool(rule.alert === true);
+                writeBool(hasNumber);
+                if (hasNumber) writeInt(rule.number!);
+                writeBool(hasRef);
+                if (hasRef) writeString(rule.ref!);
+                writeBool(hasComparator);
+                if (hasComparator) writeString(rule.comparator!);
+                writeBool(hasFind);
+                if (hasFind) writeString(rule.find!);
+            }
+        }
+
+        return cursor;
+    };
 
     window.addEventListener('message', (event) => {
         if (!event.data || typeof(event.data) !== 'object' || event.data.type !== 'pluginMessage') return;
@@ -69,12 +128,16 @@
         const rulesets = $list;
         if (listHasChanged || Object.keys(rulesets).length > 0) {
             // inform the lua code of our new list of rulesets
-            // TODO:
+            const values = Object.values(rulesets);
+            const length = writeRulesetsToBuffer(values, null);
+            const buffer = new ArrayBuffer(length + 2);
+            (new DataView(buffer, 0, 2)).setUint16(0, 5, true);
+            writeRulesetsToBuffer(values, new DataView(buffer, 2, length));
+            fetch("https://bolt-api/send-message", { method: 'POST', body: buffer });
         }
         if (listHasChanged) {
             // save the config file to disk
-            const config: ConfigRuleset[] = Object.values(rulesets).map((ruleset) => {return {
-                id: ruleset.id,
+            const config: ConfigRuleset[] = Object.values(rulesets).map((ruleset): ConfigRuleset => {return {
                 name: ruleset.name,
                 rules: Object.values(ruleset.rules).map((x: AlertRule): ConfigRule => {return {
                     ruletype: x.ruletype,

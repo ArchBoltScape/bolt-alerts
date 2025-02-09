@@ -7,6 +7,36 @@ local alertsfilename = "alerts.json"
 local cfgname = "config.ini"
 local cfg = {}
 
+-- table of rulesets that determine how each rule should alert
+local rulesets = {}
+
+-- table of the rules that determine when to alert.
+-- every rule has a "ruleset" value which is one of the objects in the "ruleset" table.
+-- types of rule and their values (other than the "ruleset" value):
+-- afktimer:
+-- - alert: whether the timer is currently past the configured threshold (micros)
+-- - threshold: time threshold, in microseconds, after which to alert the player
+-- buff:
+-- - alert: whether the alert condition is currently met
+-- - ref: one of the entries in the buffs table
+-- - comparator: one of the functions in the buffcomparators table
+-- - threshold: the value that the actual buff timer will be compared to by comparators (except active and inactive, which ignore this value)
+-- chat:
+-- - find: the lua pattern string that each new chat message will be compared to, sending an alert if it matches
+-- model:
+-- - alert: whether the model is currently on-screen
+-- - ref: one of the entries in the models table
+-- popup:
+-- - find: the lua pattern string that each new popup message will be compared to, sending an alert if it matches
+-- stat:
+-- - alert: whether the alert condition is currently met
+-- - ref: one of the entries in the stats table
+-- - threshold: a number between 0.0 and 1.0, for which an alert will be sent if the stat falls below this fraction
+-- xpgain:
+-- - alert: whether the timeout is currently met, if it has a threshold, otherwise unused
+-- - threshold: the amount of time, in microseconds, to alert after no xp is gained; if nil, the rule will alert immediately on any xp gain
+local rules = {}
+
 (function ()
   local cfgstring = bolt.loadconfig(cfgname)
   if cfgstring ~= nil then
@@ -47,6 +77,15 @@ local opentempbrowser = function (width, height, url)
   menubrowser:oncloserequest(function () menubrowser:close() end)
 end
 
+-- todo: divine blessing (brooch), chronicle fragment (divination), elder chronicle (divination), forge phoenix & divine forge phoenix???, manifested knowledge,
+-- divine carpet dust, guthixian butterfly, catalyst of alteration (bik book)
+local models = {
+  lostsoul = {center = bolt.point(0, 600, 0), boxsize = 370, boxthickness = 115}, -- lost/unstable/vengeful
+  penguinagent = {center = bolt.point(0, 200, 0), boxsize = 450, boxthickness = 120}, -- 001 through 007, but not the disguised ones
+  serenspirit = {center = bolt.point(0, 350, 0), boxsize = 400, boxthickness = 100},
+  firespirit = {center = bolt.point(0, 300, 0), boxsize = 310, boxthickness = 105}, -- normal and divine
+}
+
 local messagehandlers = {
   [1] = function (message)
     -- open "new ruleset" menu
@@ -67,6 +106,71 @@ local messagehandlers = {
   [4] = function (message)
     -- open "add rule" menu
     opentempbrowser(270, 450, "plugin://app/dist/rule.html?" .. string.sub(message, 3))
+  end,
+
+  [5] = function (message)
+    -- new rules and rulesets
+    rulesets = {}
+    rules = {}
+    for _, model in pairs(models) do
+      model.dohighlight = false
+    end
+
+    local cursor = 2
+    local readbool = function ()
+      local r = bolt.buffergetuint8(message, cursor)
+      cursor = cursor + 1
+      return r ~= 0
+    end
+    local readuint = function ()
+      local r = bolt.buffergetuint32(message, cursor)
+      cursor = cursor + 4
+      return r
+    end
+    local readint = function ()
+      local r = bolt.buffergetint32(message, cursor)
+      cursor = cursor + 4
+      return r
+    end
+    local readstring = function ()
+      local len = readuint()
+      if len == 0 then return '' end
+      local r = string.sub(message, cursor + 1, cursor + len)
+      cursor = cursor + len
+      return r
+    end
+    local readoptional = function (f)
+      if readbool() then return f() end
+      return nil
+    end
+
+    local rulesetcount = readuint()
+    for i = 1, rulesetcount do
+      local rulesetid = readstring()
+      local alert = readbool()
+      local flashwindow = readbool()
+      local onlyifunfocused = readbool()
+      local ruleset = { id = rulesetid, alert = alert, flashwindow = flashwindow, onlyifunfocused = onlyifunfocused }
+
+      local rulecount = readuint()
+      for j = 1, rulecount do
+        local ruleid = readstring()
+        local type = readstring()
+        local alert = readoptional(readbool)
+        local threshold = readoptional(readint)
+        local ref = readoptional(readstring)
+        local comparator = readoptional(readstring)
+        local find = readoptional(readstring)
+        if type == 'model' and ref then
+          local m = models[ref]
+          if m then
+            m.dohighlight = true
+          end
+        end
+        rules[j] = { id = ruleid, ruleset = ruleset, type = type, alert = alert, threshold = threshold, ref = ref, comparator = comparator, find = find }
+      end
+      rulesets[i] = ruleset
+    end
   end,
 }
 
@@ -97,16 +201,6 @@ local checkinterval = 500000 -- check twice per second
 
 local redpixel = bolt.createsurfacefromrgba(1, 1, "\xD0\x10\x10\xFF")
 local blackpixel = bolt.createsurfacefromrgba(1, 1, "\x00\x00\x00\xFF")
-
--- 3d models that may be of interest
--- todo: divine blessing (brooch), chronicle fragment (divination), elder chronicle (divination), forge phoenix & divine forge phoenix???, manifested knowledge,
--- divine carpet dust, guthixian butterfly, catalyst of alteration (bik book)
-local models = {
-  lostsoul = {center = bolt.point(0, 600, 0), boxsize = 370, boxthickness = 115}, -- lost/unstable/vengeful
-  penguinagent = {center = bolt.point(0, 200, 0), boxsize = 450, boxthickness = 120}, -- 001 through 007, but not the disguised ones
-  serenspirit = {center = bolt.point(0, 350, 0), boxsize = 400, boxthickness = 100},
-  firespirit = {center = bolt.point(0, 300, 0), boxsize = 310, boxthickness = 105}, -- normal and divine
-}
 
 local buffcomparators = {
   lessthan = function (rule, buff)
@@ -204,36 +298,6 @@ local buffs = {
   tarpaulinsheet = {},
   archaeologiststea = {},
 }
-
--- table of rulesets that determine how each rule should alert
-local rulesets = {}
-
--- table of the rules that determine when to alert.
--- every rule has a "ruleset" value which is one of the objects in the "ruleset" table.
--- types of rule and their values (other than the "ruleset" value):
--- afktimer:
--- - alert: whether the timer is currently past the configured threshold (micros)
--- - threshold: time threshold, in microseconds, after which to alert the player
--- buff:
--- - alert: whether the alert condition is currently met
--- - ref: one of the entries in the buffs table
--- - comparator: one of the functions in the buffcomparators table
--- - threshold: the value that the actual buff timer will be compared to by comparators (except active and inactive, which ignore this value)
--- chat:
--- - find: the lua pattern string that each new chat message will be compared to, sending an alert if it matches
--- model:
--- - alert: whether the model is currently on-screen
--- - ref: one of the entries in the models table
--- popup:
--- - find: the lua pattern string that each new popup message will be compared to, sending an alert if it matches
--- stat:
--- - alert: whether the alert condition is currently met
--- - ref: one of the entries in the stats table
--- - threshold: a number between 0.0 and 1.0, for which an alert will be sent if the stat falls below this fraction
--- xpgain:
--- - alert: whether the timeout is currently met, if it has a threshold, otherwise unused
--- - threshold: the amount of time, in microseconds, to alert after no xp is gained; if nil, the rule will alert immediately on any xp gain
-local rules = {}
 
 local nextrender2dbuff = nil
 local nextrender2ddebuff = nil
@@ -684,7 +748,7 @@ bolt.onrender2d(function (event)
             popupfound = true
             if message ~= lastpopupmessage then
               lastpopupmessage = message
-              for _, rule in pairs(rules) do
+              for _, rule in ipairs(rules) do
                 if rule.type == "popup" and string.find(message, rule.find) then
                   alertbyrule(rule)
                 end

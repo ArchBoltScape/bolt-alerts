@@ -19,7 +19,7 @@
     const getPostBody = () => {
         let params: Record<string, string> = {
             name,
-            do_flash_window: doFlashWindow ? '1' : '0',
+            flash_window: doFlashWindow ? '1' : '0',
             volume: volume.toString(),
             only_if_unfocused: onlyIfUnfocused ? '1' : '0',
         };
