@@ -896,7 +896,7 @@ local endcheckframe = function (t)
       local buff = rule.ref
       if rule:comparator(buff) then alertbyrule(rule) end
     elseif rule.type == "stat" then
-      local stat = stats[rule.ref]
+      local stat = rule.ref
       if stat.fraction < rule.threshold then
         alertbyrule(rule)
       else
