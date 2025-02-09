@@ -287,6 +287,7 @@ local messagehandlers = {
             comparator = buffcomparators[comparator]
           elseif type == 'stat' then
             ref = stats[ref]
+            threshold = threshold / 100.0
           end
         end
 

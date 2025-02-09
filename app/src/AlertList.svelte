@@ -244,10 +244,10 @@
             case RuleType.popup:
                 return `popup text: '${rule.find}'`;
             case RuleType.stat:
-            if (typeof(rule.number) !== 'number') return `stat '${rule.ref}'`;
-                return `stat '${rule.ref}' < ${Math.floor(rule.number * 100.0)}%`;
+                if (typeof(rule.number) !== 'number') return `stat '${rule.ref}'`;
+                return `stat '${rule.ref}' < ${rule.number}%`;
             case RuleType.xpgain:
-            if (typeof(rule.number) !== 'number') return 'xp gain';
+                if (typeof(rule.number) !== 'number') return 'xp gain';
                 return `xp gain timeout (${Math.floor(rule.number / 1000000.0)} sec)`;
             default:
                 return 'unknown';

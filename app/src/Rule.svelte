@@ -15,14 +15,11 @@
     let afkTimeoutValue: number;
     let matchTypeIsExact: boolean = find === null;
     let findExactValue: string;
-    let statThresholdValue: number;
     let xpGainModeIsTimeout: boolean | null = null;
     let xpGainTimeoutValue: number;
 
     if (ruleType === RuleType.afktimer && number) {
         afkTimeoutValue = Math.floor(number / 1000000.0);
-    } else if (ruleType === RuleType.stat && number) {
-        statThresholdValue = Math.floor(number / 100.0);
     } else if (ruleType === RuleType.xpgain && number) {
         xpGainTimeoutValue = Math.floor(number / 1000000.0);
     }
@@ -265,8 +262,7 @@
                 id="a"
                 type="number"
                 class="border-gray-200 text-[12pt] border-1 w-full max-w-[260px] px-[3px] py-[2px] border-black focus:border-3 focus:px-[1px] focus:py-0"
-                bind:value={statThresholdValue}
-                onchange={() => number = statThresholdValue / 100.0}
+                bind:value={number}
             />
         {:else if ruleType === RuleType.xpgain}
             <label for="b">Mode:</label>
