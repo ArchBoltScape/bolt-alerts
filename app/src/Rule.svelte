@@ -63,6 +63,25 @@
         }
     };
 
+    // add '^' at the start to make a pattern that only matches strings starting with the exact value,
+    // then escape all the characters found here: https://www.lua.org/pil/20.2.html
+    // note: it lists ')' but not ']', not sure if that's correct but it does work as expected anyway.
+    const exactToPattern = (s: string): string => '^'.concat(
+        findExactValue
+            .replaceAll(' ', '')
+            .replaceAll('%', '%%')
+            .replaceAll('(', '%(')
+            .replaceAll(')', '%)')
+            .replaceAll('.', '%.')
+            .replaceAll('+', '%+')
+            .replaceAll('-', '%-')
+            .replaceAll('*', '%*')
+            .replaceAll('?', '%?')
+            .replaceAll('[', '%[')
+            .replaceAll('^', '%^')
+            .replaceAll('$', '%$')
+    )
+
     const getPostBody = () => {
         let params: Record<string, string> = {
             ruleset_id: rulesetId,
@@ -225,7 +244,7 @@
                     type="text"
                     class="border-gray-200 text-[12pt] border-1 w-full max-w-[260px] px-[3px] py-[2px] border-black focus:border-3 focus:px-[1px] focus:py-0"
                     bind:value={findExactValue}
-                    onchange={() => find = '^'.concat(findExactValue.replaceAll(' ', ''))}
+                    onchange={() => find = exactToPattern(findExactValue)}
                 />
             {:else}
                 <label for="7">Pattern:</label>
