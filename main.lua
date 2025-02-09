@@ -62,7 +62,6 @@ local browser = (function ()
   end
   return bolt.createembeddedbrowser(cfg.windowx or 0, cfg.windowy or 0, cfg.windoww or 250, cfg.windowh or 180, url)
 end)()
-browser:showdevtools()
 browser:oncloserequest(bolt.close)
 
 local opentempbrowser = function (width, height, url)
@@ -84,143 +83,6 @@ local models = {
   penguinagent = {center = bolt.point(0, 200, 0), boxsize = 450, boxthickness = 120}, -- 001 through 007, but not the disguised ones
   serenspirit = {center = bolt.point(0, 350, 0), boxsize = 400, boxthickness = 100},
   firespirit = {center = bolt.point(0, 300, 0), boxsize = 310, boxthickness = 105}, -- normal and divine
-}
-
-local messagehandlers = {
-  [1] = function (message)
-    -- open "new ruleset" menu
-    opentempbrowser(270, 450, "plugin://app/dist/ruleset.html")
-  end,
-
-  [2] = function (message)
-    -- open "edit ruleset" menu
-    opentempbrowser(270, 450, "plugin://app/dist/ruleset.html?" .. string.sub(message, 3))
-  end,
-
-  [3] = function (message)
-    -- save alerts file
-    local filecontents = string.sub(message, 3)
-    bolt.saveconfig(alertsfilename, filecontents)
-  end,
-
-  [4] = function (message)
-    -- open "add rule" menu
-    opentempbrowser(270, 450, "plugin://app/dist/rule.html?" .. string.sub(message, 3))
-  end,
-
-  [5] = function (message)
-    -- new rules and rulesets
-    rulesets = {}
-    rules = {}
-    for _, model in pairs(models) do
-      model.dohighlight = false
-    end
-
-    local cursor = 2
-    local readbool = function ()
-      local r = bolt.buffergetuint8(message, cursor)
-      cursor = cursor + 1
-      return r ~= 0
-    end
-    local readuint = function ()
-      local r = bolt.buffergetuint32(message, cursor)
-      cursor = cursor + 4
-      return r
-    end
-    local readint = function ()
-      local r = bolt.buffergetint32(message, cursor)
-      cursor = cursor + 4
-      return r
-    end
-    local readstring = function ()
-      local len = readuint()
-      if len == 0 then return '' end
-      local r = string.sub(message, cursor + 1, cursor + len)
-      cursor = cursor + len
-      return r
-    end
-    local readoptional = function (f)
-      if readbool() then return f() end
-      return nil
-    end
-
-    local rulesetcount = readuint()
-    for i = 1, rulesetcount do
-      local rulesetid = readstring()
-      local alert = readbool()
-      local flashwindow = readbool()
-      local onlyifunfocused = readbool()
-      local ruleset = { id = rulesetid, alert = alert, flashwindow = flashwindow, onlyifunfocused = onlyifunfocused }
-
-      local rulecount = readuint()
-      for j = 1, rulecount do
-        local ruleid = readstring()
-        local type = readstring()
-        local alert = readoptional(readbool)
-        local threshold = readoptional(readint)
-        local ref = readoptional(readstring)
-        local comparator = readoptional(readstring)
-        local find = readoptional(readstring)
-        if type == 'model' and ref then
-          local m = models[ref]
-          if m then
-            m.dohighlight = true
-          end
-        end
-        rules[j] = { id = ruleid, ruleset = ruleset, type = type, alert = alert, threshold = threshold, ref = ref, comparator = comparator, find = find }
-      end
-      rulesets[i] = ruleset
-    end
-  end,
-}
-
-browser:onmessage(function (message)
-  local msgtype = bolt.buffergetuint16(message, 0)
-  local handler = messagehandlers[msgtype]
-  if handler then handler(message) end
-end)
-
-browser:onreposition(function (event)
-  local x, y, w, h = event:xywh()
-  cfg.windowx = x
-  cfg.windowy = y
-  cfg.windoww = w
-  cfg.windowh = h
-  saveconfig()
-end)
-
-local modules = {
-  chat = require("modules.chat.chat"),
-  buffs = require("modules.buffs.buffs"),
-  popup = require("modules.popup.popup"),
-}
-
-local checkframe = false
-local checktime = bolt.time()
-local checkinterval = 500000 -- check twice per second
-
-local redpixel = bolt.createsurfacefromrgba(1, 1, "\xD0\x10\x10\xFF")
-local blackpixel = bolt.createsurfacefromrgba(1, 1, "\x00\x00\x00\xFF")
-
-local buffcomparators = {
-  lessthan = function (rule, buff)
-    return not buff.foundoncheckframe or buff.number == nil or buff.number < rule.threshold
-  end,
-  greaterthan = function (rule, buff)
-    return buff.foundoncheckframe and buff.number and buff.number > rule.threshold
-  end,
-  parenslessthan = function (rule, buff)
-    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber < rule.threshold
-  end,
-  parensgreaterthan = function (rule, buff)
-    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber > rule.threshold
-  end,
-  active = function (_, buff)
-    return buff.foundoncheckframe
-  end,
-  inactive = function (_, buff)
-    return not buff.foundoncheckframe
-  end,
 }
 
 -- both buffs and debuffs go in this table
@@ -299,14 +161,26 @@ local buffs = {
   archaeologiststea = {},
 }
 
-local nextrender2dbuff = nil
-local nextrender2ddebuff = nil
-local nextrender2dpxleft = 0
-local nextrender2dpxtop = 0
-for name, buff in pairs(buffs) do
-  buff.name = name
-  buff.active = false
-end
+local buffcomparators = {
+  lessthan = function (rule, buff)
+    return not buff.foundoncheckframe or buff.number == nil or buff.number < rule.threshold
+  end,
+  greaterthan = function (rule, buff)
+    return buff.foundoncheckframe and buff.number and buff.number > rule.threshold
+  end,
+  parenslessthan = function (rule, buff)
+    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber < rule.threshold
+  end,
+  parensgreaterthan = function (rule, buff)
+    return buff.foundoncheckframe and buff.parensnumber and buff.parensnumber > rule.threshold
+  end,
+  active = function (_, buff)
+    return buff.foundoncheckframe
+  end,
+  inactive = function (_, buff)
+    return not buff.foundoncheckframe
+  end,
+}
 
 local stats = {
   health = {fraction = 1.0},
@@ -326,6 +200,140 @@ local statbars = {
   ["\x1f\xac\xa0\x00\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x1f\xac\xa0\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\xff\x18\x9e\x8f\x00"]
     = stats.summoning,
 }
+
+local messagehandlers = {
+  [1] = function (message)
+    -- open "new ruleset" menu
+    opentempbrowser(270, 450, "plugin://app/dist/ruleset.html")
+  end,
+
+  [2] = function (message)
+    -- open "edit ruleset" menu
+    opentempbrowser(270, 450, "plugin://app/dist/ruleset.html?" .. string.sub(message, 3))
+  end,
+
+  [3] = function (message)
+    -- save alerts file
+    local filecontents = string.sub(message, 3)
+    bolt.saveconfig(alertsfilename, filecontents)
+  end,
+
+  [4] = function (message)
+    -- open "add rule" menu
+    opentempbrowser(270, 450, "plugin://app/dist/rule.html?" .. string.sub(message, 3))
+  end,
+
+  [5] = function (message)
+    -- new rules and rulesets
+    rulesets = {}
+    rules = {}
+    for _, model in pairs(models) do
+      model.dohighlight = false
+    end
+
+    local cursor = 2
+    local readbool = function ()
+      local r = bolt.buffergetuint8(message, cursor)
+      cursor = cursor + 1
+      return r ~= 0
+    end
+    local readuint = function ()
+      local r = bolt.buffergetuint32(message, cursor)
+      cursor = cursor + 4
+      return r
+    end
+    local readint = function ()
+      local r = bolt.buffergetint32(message, cursor)
+      cursor = cursor + 4
+      return r
+    end
+    local readstring = function ()
+      local len = readuint()
+      if len == 0 then return '' end
+      local r = string.sub(message, cursor + 1, cursor + len)
+      cursor = cursor + len
+      return r
+    end
+    local readoptional = function (f)
+      if readbool() then return f() end
+      return nil
+    end
+
+    local rulesetcount = readuint()
+    local ruleindex = 1
+    for i = 1, rulesetcount do
+      local rulesetid = readstring()
+      local alert = readbool()
+      local flashwindow = readbool()
+      local onlyifunfocused = readbool()
+      local ruleset = { id = rulesetid, alert = alert, flashwindow = flashwindow, onlyifunfocused = onlyifunfocused }
+
+      local rulecount = readuint()
+      for _ = 1, rulecount do
+        local ruleid = readstring()
+        local type = readstring()
+        local alert = readoptional(readbool)
+        local threshold = readoptional(readint)
+        local ref = readoptional(readstring)
+        local comparator = readoptional(readstring)
+        local find = readoptional(readstring)
+
+        if ref then
+          if type == 'model' then
+            ref = models[ref]
+            if ref then ref.dohighlight = true end
+          elseif type == 'buff' then
+            ref = buffs[ref]
+            comparator = buffcomparators[comparator]
+          elseif type == 'stat' then
+            ref = stats[ref]
+          end
+        end
+
+        rules[ruleindex] = { id = ruleid, ruleset = ruleset, type = type, alert = alert, threshold = threshold, ref = ref, comparator = comparator, find = find }
+        ruleindex = ruleindex + 1
+      end
+      rulesets[i] = ruleset
+    end
+  end,
+}
+
+browser:onmessage(function (message)
+  local msgtype = bolt.buffergetuint16(message, 0)
+  local handler = messagehandlers[msgtype]
+  if handler then handler(message) end
+end)
+
+browser:onreposition(function (event)
+  local x, y, w, h = event:xywh()
+  cfg.windowx = x
+  cfg.windowy = y
+  cfg.windoww = w
+  cfg.windowh = h
+  saveconfig()
+end)
+
+local modules = {
+  chat = require("modules.chat.chat"),
+  buffs = require("modules.buffs.buffs"),
+  popup = require("modules.popup.popup"),
+}
+
+local checkframe = false
+local checktime = bolt.time()
+local checkinterval = 500000 -- check twice per second
+
+local redpixel = bolt.createsurfacefromrgba(1, 1, "\xD0\x10\x10\xFF")
+local blackpixel = bolt.createsurfacefromrgba(1, 1, "\x00\x00\x00\xFF")
+
+local nextrender2dbuff = nil
+local nextrender2ddebuff = nil
+local nextrender2dpxleft = 0
+local nextrender2dpxtop = 0
+for name, buff in pairs(buffs) do
+  buff.name = name
+  buff.active = false
+end
 
 local rgbaleniency = 2.5 / 255.0
 
@@ -769,8 +777,10 @@ bolt.onrender2d(function (event)
           if string.find(message, "^%[%d%d:%d%d:%d%d%]") then
             local msg = string.sub(message, 11)
             for ruleindex, rule in ipairs(rules) do
-              if rule.type == "chat" and string.find(msg, rule.find) then
-                alertbyrule(rule)
+              if rule.type == "chat" then
+                if string.find(msg, rule.find) then
+                  alertbyrule(rule)
+                end
               end
             end
           end
