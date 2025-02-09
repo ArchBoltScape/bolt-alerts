@@ -218,7 +218,7 @@
     const getRuleDescription = (rule: AlertRule) => {
         switch (rule.ruletype) {
             case RuleType.afktimer:
-                if (!rule.number) return 'afk timer';
+                if (typeof(rule.number) !== 'number') return 'afk timer';
                 return `afk timer (${Math.floor(rule.number / 1000000.0)} sec)`;
             case RuleType.buff:
                 switch (rule.comparator) {
@@ -244,10 +244,10 @@
             case RuleType.popup:
                 return `popup text: '${rule.find}'`;
             case RuleType.stat:
-                if (!rule.number) return ``;
+            if (typeof(rule.number) !== 'number') return `stat '${rule.ref}'`;
                 return `stat '${rule.ref}' < ${Math.floor(rule.number * 100.0)}%`;
             case RuleType.xpgain:
-                if (!rule.number) return 'xp gain';
+            if (typeof(rule.number) !== 'number') return 'xp gain';
                 return `xp gain timeout (${Math.floor(rule.number / 1000000.0)} sec)`;
             default:
                 return 'unknown';
