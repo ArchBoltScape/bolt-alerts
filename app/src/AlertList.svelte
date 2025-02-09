@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { type Ruleset, type ConfigRuleset } from './interfaces';
-    import { get, writable, type Writable } from 'svelte/store';
+    import { type Ruleset, type ConfigRuleset, type AlertRule, type ConfigRule } from './interfaces';
+    import { get, type Writable } from 'svelte/store';
     import { v4 as randomUUID } from 'uuid';
 
     const params = new URLSearchParams(window.location.search);
@@ -38,20 +38,34 @@
 
     let listHasChanged = false;
     export let list: Writable<{[id: string]: Ruleset}>;
-    $: if (listHasChanged) {
-        const config = Object.values($list).map((ruleset) => {return {
-            id: ruleset.id,
-            name: ruleset.name,
-            rules: [],
-            doFlashWindow: ruleset.doFlashWindow,
-            sound: ruleset.sound,
-            volume: ruleset.volume,
-            onlyIfUnfocused: ruleset.onlyIfUnfocused,
-        }});
-        const body = '\x03\x00'.concat(JSON.stringify(config));
-        fetch("https://bolt-api/send-message", { method: 'POST', body });
-    } else {
-        listHasChanged = true;
+    $: {
+        const rulesets = $list;
+        if (listHasChanged || Object.keys(rulesets).length > 0) {
+            // inform the lua code of our new list of rulesets
+            // TODO:
+        }
+        if (listHasChanged) {
+            // save the config file to disk
+            const config: ConfigRuleset[] = Object.values(rulesets).map((ruleset) => {return {
+                id: ruleset.id,
+                name: ruleset.name,
+                rules: Object.values(ruleset.rules).map((x: AlertRule): ConfigRule => {return {
+                    ruletype: x.ruletype,
+                    number: x.number,
+                    ref: x.ref,
+                    comparator: x.comparator,
+                    find: x.find,
+                }}),
+                doFlashWindow: ruleset.doFlashWindow,
+                sound: ruleset.sound,
+                volume: ruleset.volume,
+                onlyIfUnfocused: ruleset.onlyIfUnfocused,
+            }});
+            const body = '\x03\x00'.concat(JSON.stringify(config));
+            fetch("https://bolt-api/send-message", { method: 'POST', body });
+        } else {
+            listHasChanged = true;
+        }
     }
 
     const openNewRulesetMenu = () => fetch("https://bolt-api/send-message", { method: 'POST', body: new Uint8Array([1, 0]) });
@@ -69,6 +83,13 @@
         const body = '\x02\x00'.concat(new URLSearchParams(params).toString());
         fetch("https://bolt-api/send-message", { method: 'POST', body });
     };
+    const openAddRuleMenu = (ruleset: Ruleset) => {
+        let params: Record<string, string> = {
+            ruleset_id: ruleset.id,
+        };
+        const body = '\x04\x00'.concat(new URLSearchParams(params).toString());
+        fetch("https://bolt-api/send-message", { method: 'POST', body });
+    };
     const deleteRuleset = (ruleset: Ruleset) => {
         const newList = get(list);
         delete newList[ruleset.id];
@@ -82,7 +103,7 @@
 
 <div>
     {#each Object.values($list) as ruleset, i}
-        <div class={i & 1 ? "relative w-full bg-gray-300 b-0 text-[8pt]" : "relative w-full bg-gray-200 b-0 text-[8pt]"}>
+        <div class={i & 1 ? "relative w-full bg-gray-200 b-0 text-[8pt]" : "relative w-full bg-gray-300 b-0 text-[8pt]"}>
             {#if ruleset.expanded}
                 <button class="h-[14px] w-[14px] pointer-events-auto" onclick={() => setExpanded(ruleset, false)}><img src="plugin://app/images/caret-down-solid.svg" class="w-full h-full" alt="Hide" /></button>
             {:else}
@@ -101,7 +122,14 @@
                 onclick={() => openEditRulesetMenu(ruleset)}
                 title="Edit"
             >
-                <img src="plugin://app/images/gear-solid.svg" class="w-full h-full" alt="Edit" />
+                <img src="plugin://app/images/gear-solid.svg" class="absolute top-[2px] left-[2px] w-[14px] h-[14px]" alt="Edit" />
+            </button>
+            <button
+                class="absolute rounded-lg right-[36px] top-0 h-[18px] w-[18px] hover:bg-emerald-400 pointer-events-auto py-0 by-0"
+                onclick={() => openAddRuleMenu(ruleset)}
+                title="Add rule"
+            >
+                <img src="plugin://app/images/plus-solid.svg" class="w-full h-full" alt="Add rule" />
             </button>
         </div>
     {/each}

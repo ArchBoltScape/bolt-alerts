@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         index: resolve(dir, "index.html"),
         ruleset: resolve(dir, "ruleset.html"),
+        rule: resolve(dir, "rule.html"),
       },
     },
   },

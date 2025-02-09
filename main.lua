@@ -35,31 +35,38 @@ end)()
 browser:showdevtools()
 browser:oncloserequest(bolt.close)
 
+local opentempbrowser = function (width, height, url)
+  local menubrowser = bolt.createbrowser(width, height, url)
+  local done = false
+  menubrowser:onmessage(function (message)
+    if done then return end
+    browser:sendmessage(message)
+    menubrowser:close()
+    done = true
+  end)
+  menubrowser:oncloserequest(function () menubrowser:close() end)
+end
+
 local messagehandlers = {
   [1] = function (message)
     -- open "new ruleset" menu
-    local menubrowser = bolt.createbrowser(270, 450, "plugin://app/dist/ruleset.html")
-    menubrowser:onmessage(function (message)
-      browser:sendmessage(message)
-      menubrowser:close()
-    end)
-    menubrowser:oncloserequest(function () menubrowser:close() end)
+    opentempbrowser(270, 450, "plugin://app/dist/ruleset.html")
   end,
 
   [2] = function (message)
     -- open "edit ruleset" menu
-    local menubrowser = bolt.createbrowser(270, 450, "plugin://app/dist/ruleset.html?" .. string.sub(message, 3))
-    menubrowser:onmessage(function (message)
-      browser:sendmessage(message)
-      menubrowser:close()
-    end)
-    menubrowser:oncloserequest(function () menubrowser:close() end)
+    opentempbrowser(270, 450, "plugin://app/dist/ruleset.html?" .. string.sub(message, 3))
   end,
 
   [3] = function (message)
     -- save alerts file
     local filecontents = string.sub(message, 3)
     bolt.saveconfig(alertsfilename, filecontents)
+  end,
+
+  [4] = function (message)
+    -- open "add rule" menu
+    opentempbrowser(270, 450, "plugin://app/dist/rule.html?" .. string.sub(message, 3))
   end,
 }
 
@@ -224,9 +231,8 @@ local rulesets = {}
 -- - ref: one of the entries in the stats table
 -- - threshold: a number between 0.0 and 1.0, for which an alert will be sent if the stat falls below this fraction
 -- xpgain:
--- - alert: whether the timeout is currently met, if istimeout = true, otherwise unused
--- - istimeout: if true, this rule alerts after a certain amount of time with no xp gain, otherwise it alerts immediately on xp gain
--- - threshold: the timeout in microseconds for istimeout rules
+-- - alert: whether the timeout is currently met, if it has a threshold, otherwise unused
+-- - threshold: the amount of time, in microseconds, to alert after no xp is gained; if nil, the rule will alert immediately on any xp gain
 local rules = {}
 
 local nextrender2dbuff = nil
@@ -823,7 +829,7 @@ local endcheckframe = function (t)
         rule.alert = false
       end
     elseif rule.type == "xpgain" then
-      if rule.istimeout then
+      if rule.threshold then
         if t - lastxpgaintime > rule.threshold then
           alertbyrule(rule)
         else
