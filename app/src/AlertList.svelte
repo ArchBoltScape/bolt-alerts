@@ -1,5 +1,6 @@
 <script lang="ts">
     import { RuleType, type Ruleset, type ConfigRuleset, type AlertRule, type ConfigRule } from './interfaces';
+    import { getInitialAlertState } from './common';
     import { get, type Writable } from 'svelte/store';
     import { v4 as randomUUID } from 'uuid';
 
@@ -103,11 +104,12 @@
                 } else {
                     id = randomUUID();
                 }
-                let number = params.get('number');
+                const number = params.get('number');
+                const ruletype = params.get('type')! as RuleType;
                 ruleset.rules[id] = {
                     id,
-                    ruletype: params.get('type')! as RuleType,
-                    alert: oldRule ? oldRule.alert : false,
+                    ruletype,
+                    alert: oldRule ? oldRule.alert : getInitialAlertState(ruletype, !!number),
                     number: number ? parseInt(number) : undefined,
                     ref: params.get('ref') ?? undefined,
                     comparator: params.get('comparator') ?? undefined,

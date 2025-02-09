@@ -1,6 +1,7 @@
 <script lang="ts">
   import AlertList from "./AlertList.svelte";
   import { RuleType, type Ruleset, type ConfigRuleset, type AlertRule } from './interfaces';
+  import { getInitialAlertState } from "./common";
   import { writable, type Writable } from 'svelte/store';
   import { v4 as randomUUID } from 'uuid';
 
@@ -15,10 +16,11 @@
       let rules: { [id: string]: AlertRule; } = {};
       for (const rule of x.rules) {
         const id = randomUUID();
+        const ruletype = rule.ruletype as RuleType;
         rules[id] = {
           id,
-          ruletype: rule.ruletype as RuleType,
-          alert: false,
+          ruletype,
+          alert: getInitialAlertState(ruletype, !!rule.number),
           number: rule.number,
           ref: rule.ref,
           comparator: rule.comparator,
