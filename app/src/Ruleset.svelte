@@ -76,6 +76,7 @@
             type="checkbox"
             bind:checked={doPlaySound}
             title={playSoundTooltip}
+            onchange={() => {if (doPlaySound) { soundName = "ding.wav"; } else { soundName = null; }}}
         />
         <label for="4" class="font-italic" title={playSoundTooltip}>Play a sound</label>
         {#if doPlaySound}
@@ -87,7 +88,7 @@
                 type="text"
                 class="border-gray-200 text-[12pt] border-1 w-full max-w-[260px] px-[3px] py-[2px] border-black focus:border-3 focus:px-[1px] focus:py-0 disabled:border-gray-500"
                 bind:value={soundName}
-                disabled={!doPlaySound}
+                disabled={true}
                 title={soundNameTooltip}
             />
             <br>
@@ -97,10 +98,10 @@
         {/if}
     </div>
     <span>
-        <button class="w-25 bg-red-500 rounded-sm py-1 px-2 mr-1 mt-4 font-bold text-white text-center hover:opacity-75" on:click={cancel}>Cancel</button>
+        <button class="w-25 bg-red-500 rounded-sm py-1 px-2 mr-1 mt-4 font-bold text-white text-center hover:opacity-75" onclick={cancel}>Cancel</button>
         <button
             class="w-25 bg-blue-500 rounded-sm py-1 px-2 mt-4 font-bold text-white text-center enabled:hover:opacity-75 disabled:bg-gray-500"
-            on:click={save}
+            onclick={save}
             disabled={name.length === 0}
         >Save</button>
     </span>

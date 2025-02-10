@@ -4,6 +4,12 @@
     import { get, type Writable } from 'svelte/store';
     import { v4 as randomUUID } from 'uuid';
 
+    let soundEnabled = false;
+    let globalFlashTimer = true;
+    setInterval(() => {
+        globalFlashTimer = !globalFlashTimer;
+    }, 350);
+
     const writeRulesetsToBuffer = (list: Ruleset[], buffer: DataView | null) => {
         let cursor = 0;
 
@@ -119,16 +125,47 @@
                 list.set(rulesets);
                 break;
             }
+            case 3: {
+                // change alert state
+                const rulesets = $list;
+                const data = new URLSearchParams((new TextDecoder()).decode(event.data.content.slice(2)));
+                const ruleset = rulesets[data.get('ruleset_id')!];
+                const rule = ruleset.rules[data.get('rule_id')!];
+                const alert = data.get('alert')! === '1';
+                const hasAlert = typeof(rule.alert) === 'boolean';
+                if (hasAlert) {
+                    rule.alert = alert;
+                }
+                let rulesetAlert = false;
+                for (let rule of Object.values(ruleset.rules)) {
+                    if (rule.alert) {
+                        rulesetAlert = true;
+                    }
+                }
+                if ((rulesetAlert && !ruleset.alert) || (alert && !hasAlert)) {
+                    if (ruleset.sound && soundEnabled) {
+                        const audio = (new Audio('plugin://app/sounds/'.concat(ruleset.sound)));
+                        audio.volume = Math.min(Math.max(ruleset.volume / 100.0, 0.0), 1.0);
+                        audio.play();
+                    }
+                }
+                ruleset.alert = rulesetAlert;
+                doActOnListChange = false;
+                doUpdateLuaOnListChange = false;
+                list.set(rulesets);
+                break;
+            }
             default:
                 console.error(`unknown message type ${msgType}`);
         }
     });
 
-    let listHasChanged = false;
+    let doActOnListChange = false;
+    let doUpdateLuaOnListChange = true;
     export let list: Writable<{[id: string]: Ruleset}>;
     $: {
         const rulesets = $list;
-        if (listHasChanged || Object.keys(rulesets).length > 0) {
+        if (doUpdateLuaOnListChange && (doActOnListChange || Object.keys(rulesets).length > 0)) {
             // inform the lua code of our new list of rulesets
             const values = Object.values(rulesets);
             const length = writeRulesetsToBuffer(values, null);
@@ -137,7 +174,7 @@
             writeRulesetsToBuffer(values, new DataView(buffer, 2, length));
             fetch("https://bolt-api/send-message", { method: 'POST', body: buffer });
         }
-        if (listHasChanged) {
+        if (doActOnListChange) {
             // save the config file to disk
             const config: ConfigRuleset[] = Object.values(rulesets).map((ruleset): ConfigRuleset => {return {
                 name: ruleset.name,
@@ -156,8 +193,9 @@
             const body = '\x03\x00'.concat(JSON.stringify(config));
             fetch("https://bolt-api/send-message", { method: 'POST', body });
         } else {
-            listHasChanged = true;
+            doActOnListChange = true;
         }
+        doUpdateLuaOnListChange = true;
     }
 
     const openNewRulesetMenu = () => fetch("https://bolt-api/send-message", { method: 'POST', body: new Uint8Array([1, 0]) });
@@ -257,7 +295,7 @@
 
 <div>
     {#each Object.values($list) as ruleset, i}
-        <div class={"relative w-full text-[8pt] ".concat(ruleset.alert ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
+        <div class={"relative w-full text-[8pt] ".concat((ruleset.alert && globalFlashTimer) ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
             {#if ruleset.expanded}
                 <button class="h-[14px] w-[14px] pointer-events-auto" onclick={() => setExpanded(ruleset, false)}><img src="plugin://app/images/caret-down-solid.svg" class="w-full h-full" alt="Hide" /></button>
             {:else}
@@ -288,7 +326,7 @@
         </div>
         {#if ruleset.expanded}
             {#each Object.values(ruleset.rules) as rule}
-                <div class={"relative px-1 w-full text-[8pt] ".concat(rule.alert ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
+                <div class={"relative px-1 w-full text-[8pt] ".concat((rule.alert && globalFlashTimer) ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
                     {getRuleDescription(rule)}
                     <button
                         class="absolute rounded-lg right-0 top-0 h-[18px] w-[18px] hover:bg-red-500 pointer-events-auto py-0 by-0"
@@ -308,5 +346,8 @@
             {/each}
         {/if}
     {/each}
-    <button class="rounded-sm my-1 px-2 py-1 bg-emerald-400 pointer-events-auto hover:opacity-75" onclick={openNewRulesetMenu}>Add ruleset</button>
+    {#if !soundEnabled}
+        <button class={"rounded-sm m-1 px-2 py-1 pointer-events-auto hover:opacity-75 ".concat(globalFlashTimer ? "bg-red-400" : "bg-blue-400")} onclick={() => soundEnabled = true}>Enable sounds</button>
+    {/if}
+    <button class="rounded-sm m-1 px-2 py-1 bg-emerald-400 pointer-events-auto hover:opacity-75" onclick={openNewRulesetMenu}>Add ruleset</button>
 </div>

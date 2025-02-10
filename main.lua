@@ -359,9 +359,23 @@ local popupmessageimages = {
   ["\x0a\x0a\x0a\xc5\x0a\x0a\x0a\xc9\x00\x00\x01\xcc\x00\x00\x01\xd3\x00\x00\x01\xd9\x00\x00\x01\xda\x00\x00\x01\xd9\xa9\x18\x18\xff\xa9\x18\x18\xff\x00\x00\x01\x71"] = 2,
 }
 
+local sendalertmessage = function (rule, state)
+  local message = string.format("\x03\x00ruleset_id=%s&rule_id=%s&alert=%s", rule.ruleset.id, rule.id, state and '1' or '0')
+  browser:sendmessage(message)
+end
+
+local setrulealertstate = function (rule, state)
+  if rule.alert ~= state then sendalertmessage(rule, state) end
+  rule.alert = state
+end
+
 local alertbyrule = function (rule)
   if rule.alert then return end
-  if rule.alert ~= nil then rule.alert = true end
+  if rule.alert ~= nil then
+    setrulealertstate(rule, true)
+  else
+    sendalertmessage(rule, true)
+  end
   local ruleset = rule.ruleset
   if ruleset.alert then return end
   ruleset.alert = true
@@ -872,7 +886,7 @@ local startcheckframe = function (t)
       if t - lastnonafkaction >= rule.threshold then
         alertbyrule(rule)
       else
-        rule.alert = false
+        setrulealertstate(rule, false)
       end
     end
   end
@@ -895,27 +909,31 @@ local endcheckframe = function (t)
   for _, rule in ipairs(rules) do
     if rule.type == "buff" then
       local buff = rule.ref
-      if rule:comparator(buff) then alertbyrule(rule) end
+      if rule:comparator(buff) then
+        alertbyrule(rule)
+      else
+        setrulealertstate(rule, false)
+      end
     elseif rule.type == "stat" then
       local stat = rule.ref
       if stat.fraction < rule.threshold then
         alertbyrule(rule)
       else
-        rule.alert = false
+        setrulealertstate(rule, false)
       end
     elseif rule.type == "xpgain" then
       if rule.threshold then
         if t - lastxpgaintime > rule.threshold then
           alertbyrule(rule)
         else
-          rule.alert = false
+          setrulealertstate(rule, false)
         end
       elseif didgainxp then
         alertbyrule(rule)
       end
     elseif rule.type == "model" then
       if not rule.ref.foundoncheckframe then
-        rule.alert = false
+        setrulealertstate(rule, false)
       end
     end
 
