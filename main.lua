@@ -693,7 +693,7 @@ local docheckxpgain = false
 local popupfound = false
 local lastpopupmessage = nil
 local mostrecentmessage = nil
-local checkchat = true
+local checkchat = false
 bolt.onrender2d(function (event)
   local t = bolt.time()
   if not (checkframe or docheckxpgain) then return end
@@ -718,7 +718,29 @@ bolt.onrender2d(function (event)
       end
 
       if aw == ah then
-        if aw == 27 then
+        if aw == 11 then
+          if checkchat and event:texturecompare(ax, ay + 5, "\x00\x00\x01\xff\xc0\xd4\xd1\xff\xc0\xd4\xd1\xff\xd9\xe0\xde\xff\xc0\xd4\xd1\xff\xc0\xd4\xd1\xff\xc0\xd4\xd1\xff\xc0\xd4\xd1\xff\x9f\xd9\xce\xff\x9f\xd9\xce\xff\x00\x00\x01\xff") then
+            local ischat, isscrolled = modules.chat:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
+              mostrecentmessage = message
+              if string.find(message, "^%[%d%d:%d%d:%d%d%]") then
+                local msg = string.sub(message, 11)
+                for _, rule in ipairs(rules) do
+                  if rule.type == "chat" then
+                    if string.find(msg, rule.find) then
+                      alertbyrule(rule)
+                    end
+                  end
+                end
+              end
+            end)
+            if ischat then
+              checkchat = false
+              if isscrolled then
+                print("can't read chat because it's scrolled up")
+              end
+            end
+          end
+        elseif aw == 27 then
           if event:texturecompare(ax, ay + 5, "\x63\x2d\x12\xff\x6f\x3d\x19\xff\x6f\x3d\x19\xff\x00\x00\x01\xff\xab\x8b\x35\xff\xab\x8b\x35\xff\x63\x2d\x12\xff\x68\x08\x06\xff\xc4\x9b\x3d\xff\x6b\x52\x1f\xff\x6b\x52\x1f\xff\x16\x1a\x1c\xff\x16\x1a\x1c\xff\x16\x1a\x1c\xff\x16\x1a\x1c\xff\x16\x1a\x1c\xff\x6b\x52\x1f\xff\x6b\x52\x1f\xff\x6b\x52\x1f\xff\xb4\x0e\x25\xff\x68\x08\x06\xff\xc4\x9b\x3d\xff\x00\x00\x01\xff\x8a\x54\x10\xff\x6f\x3d\x19\xff\x6f\x3d\x19\xff\x63\x2d\x12\xff") then
             readbuff(buffs.aura, true)
           elseif event:texturecompare(ax, ay + 10, "\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x07\x00\x00\x01\x32\x27\x3b\x48\xd4\x27\x3b\x48\xff\x7f\x9c\xad\xff\x7f\x9c\xad\xff\x43\x5e\x67\xff\x43\x5e\x67\xff\x43\x5e\x67\xff\x4e\x74\x81\xff\x6c\x91\xb2\xff\x6c\x91\xb2\xff\x63\x78\x87\xff\x4e\x74\x81\xff\x69\x8b\x9d\xff\x94\xb8\xc5\xff\x94\xb8\xc5\xff\x8c\xda\xf1\xff\xb8\xe4\xf9\xff\xb8\xe4\xf9\xff\xd2\xdf\xe5\xff\x39\x41\x46\xd5\x00\x00\x01\x2a\x00\x00\x01\x03") then
@@ -785,26 +807,6 @@ bolt.onrender2d(function (event)
           local x2, _ = event:vertexxy(i)
           local x1, _ = event:vertexxy(i + 2)
           bar.fraction = (x2 - (x1 + 1)) / 82.0
-        end
-      elseif checkchat and aw == 13 and ah == 10 and event:texturecompare(ax, ay + 5, "\x4d\x4c\x4c\xff\xca\xca\xca\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xe0\xe0\xe0\xff\xca\xca\xca\xff\xca\xca\xca\xff\xca\xca\xca\xff\xaf\xaf\xaf\xff\xaf\xaf\xaf\xff\x2f\x2d\x2b\xff") then
-        local ischat, isscrolled = modules.chat:tryreadchat(event, i + verticesperimage, mostrecentmessage, function (message)
-          mostrecentmessage = message
-          if string.find(message, "^%[%d%d:%d%d:%d%d%]") then
-            local msg = string.sub(message, 11)
-            for ruleindex, rule in ipairs(rules) do
-              if rule.type == "chat" then
-                if string.find(msg, rule.find) then
-                  alertbyrule(rule)
-                end
-              end
-            end
-          end
-        end)
-        if ischat then
-          checkchat = false
-          if isscrolled then
-            print("can't read chat because it's scrolled up")
-          end
         end
       end
     end
