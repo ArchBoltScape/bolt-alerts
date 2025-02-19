@@ -295,7 +295,7 @@
 
 <div>
     {#each Object.values($list) as ruleset, i}
-        <div class={"relative w-full text-[8pt] ".concat((ruleset.alert && globalFlashTimer) ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
+        <div class={"relative w-full text-[8pt] h-[19px] ".concat((ruleset.alert && globalFlashTimer) ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
             {#if ruleset.expanded}
                 <button class="h-[14px] w-[14px] pointer-events-auto" onclick={() => setExpanded(ruleset, false)}><img src="plugin://app/images/caret-down-solid.svg" class="w-full h-full" alt="Hide" /></button>
             {:else}
@@ -310,23 +310,23 @@
                 <img src="plugin://app/images/xmark-solid.svg" class="w-full h-full" alt="Delete" />
             </button>
             <button
-                class="absolute rounded-lg right-[18px] top-0 h-[18px] w-[18px] hover:bg-blue-400 pointer-events-auto py-0 by-0"
+                class="absolute rounded-lg right-[14px] top-0 h-[18px] w-[18px] hover:bg-blue-400 pointer-events-auto py-0 by-0"
                 onclick={() => openEditRulesetMenu(ruleset)}
                 title="Edit"
             >
-                <img src="plugin://app/images/gear-solid.svg" class="absolute top-[2px] left-[2px] w-[14px] h-[14px]" alt="Edit" />
+                <img src="plugin://app/images/gear-solid.svg" class="absolute top-[3px] left-[3px] w-[12px] h-[12px]" alt="Edit" />
             </button>
             <button
-                class="absolute rounded-lg right-[36px] top-0 h-[18px] w-[18px] hover:bg-emerald-400 pointer-events-auto py-0 by-0"
+                class="absolute rounded-lg right-[27px] top-0 h-[18px] w-[18px] hover:bg-emerald-400 pointer-events-auto py-0 by-0"
                 onclick={() => openAddRuleMenu(ruleset)}
                 title="Add rule"
             >
-                <img src="plugin://app/images/plus-solid.svg" class="w-full h-full" alt="Add rule" />
+                <img src="plugin://app/images/plus-solid.svg" class="absolute top-[3px] left-[3px] w-[12px] h-[12px]" alt="Add rule" />
             </button>
         </div>
         {#if ruleset.expanded}
             {#each Object.values(ruleset.rules) as rule}
-                <div class={"relative px-1 w-full text-[8pt] ".concat((rule.alert && globalFlashTimer) ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
+                <div class={"relative px-1 w-full text-[8pt] h-[19px] ".concat((rule.alert && globalFlashTimer) ? "bg-red-400" : (i & 1 ? "bg-gray-200" : "bg-gray-300"))}>
                     {getRuleDescription(rule)}
                     <button
                         class="absolute rounded-lg right-0 top-0 h-[18px] w-[18px] hover:bg-red-500 pointer-events-auto py-0 by-0"
@@ -336,11 +336,11 @@
                         <img src="plugin://app/images/xmark-solid.svg" class="w-full h-full" alt="Delete" />
                     </button>
                     <button
-                        class="absolute rounded-lg right-[18px] top-0 h-[18px] w-[18px] hover:bg-blue-400 pointer-events-auto py-0 by-0"
+                        class="absolute rounded-lg right-[14px] top-0 h-[18px] w-[18px] hover:bg-blue-400 pointer-events-auto py-0 by-0"
                         onclick={() => openEditRuleMenu(ruleset, rule)}
                         title="Edit"
                     >
-                        <img src="plugin://app/images/gear-solid.svg" class="absolute top-[2px] left-[2px] w-[14px] h-[14px]" alt="Edit" />
+                        <img src="plugin://app/images/gear-solid.svg" class="absolute top-[3px] left-[3px] w-[12px] h-[12px]" alt="Edit" />
                     </button>
                 </div>
             {/each}
