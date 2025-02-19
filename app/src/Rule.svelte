@@ -37,7 +37,7 @@
         switch (ruleType) {
             case RuleType.afktimer:
                 afkTimeoutValue = 60 * 14;
-                number = afkTimeoutValue;
+                number = afkTimeoutValue * 1000000;
                 break;
             case RuleType.buff:
                 ref = null;
