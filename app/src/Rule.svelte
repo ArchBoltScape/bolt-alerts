@@ -68,7 +68,6 @@
     // note: it lists ')' but not ']', not sure if that's correct but it does work as expected anyway.
     const exactToPattern = (s: string): string => '^'.concat(
         findExactValue
-            .replaceAll(' ', '')
             .replaceAll('%', '%%')
             .replaceAll('(', '%(')
             .replaceAll(')', '%)')
