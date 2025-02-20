@@ -1,5 +1,1 @@
-{
-    "url": "https://github.com/Adamcake/bolt-alerts/releases/download/0.1/alerts.tar.xz",
-    "version": "0.1-beta",
-    "sha256": "522638698e2755d1095fa441a1ede1b5f6598ebc90de0afa04244f7845d310a5"
-}
+{"sha256": "8323ee93f13be6e344f767f4753a5ef99fba6e8f08acb32b72fdaef45549fca6  /run/user/1000/bolt-alerts-v0.2-beta.tar.zst", "version": "0.2-beta", "url": "https://github.com/Adamcake/bolt-alerts/releases/download/0.2-beta/bolt-alerts-v0.2-beta.tar.zst"}
