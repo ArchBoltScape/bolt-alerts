@@ -245,6 +245,10 @@
 
     const deleteRule = (ruleset: Ruleset, rule: AlertRule) => {
         delete ruleset.rules[rule.id];
+        ruleset.alert = false;
+        for (rule of Object.values(ruleset.rules)) {
+            if (rule.alert) ruleset.alert = true;
+        }
         list.set($list);
     }
 
