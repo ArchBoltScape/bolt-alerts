@@ -371,6 +371,7 @@ end
 
 local alertbyrule = function (rule)
   if rule.alert then return end
+  if rule.ruleset.onlyifunfocused and bolt.isfocused() then return end
   if rule.alert ~= nil then
     setrulealertstate(rule, true)
   else
