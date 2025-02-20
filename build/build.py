@@ -27,7 +27,7 @@ with open(boltfile, "r+") as f:
     f.truncate()
 
 with open(tempfile, 'wb') as f:
-    args = ["lua", "{}/archive.lua".format(scriptdir), "{}/".format(basedir)] \
+    args = ["lua", "{}/archive.lua".format(scriptdir), "{}/".format(basedir), "{}/bolt.json".format(basedir)] \
         + glob.glob("{}/*.lua".format(basedir), recursive=False) \
         + [x for x in glob.iglob("{}/app/dist/**/*".format(basedir), recursive=True) if os.path.isfile(x)] \
         + [x for x in glob.iglob("{}/app/images/**/*".format(basedir), recursive=True) if os.path.isfile(x)] \
