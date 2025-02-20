@@ -34,7 +34,7 @@ with open(tempfile, 'wb') as f:
         + [x for x in glob.iglob("{}/app/sounds/**/*".format(basedir), recursive=True) if os.path.isfile(x)]
     subprocess.run(args, stdout=f)
 
-filehash = subprocess.run(["sha256sum", tempfile], stdout=subprocess.PIPE).stdout.strip().decode(sys.stdout.encoding)
+filehash = subprocess.run(["sha256sum", tempfile], stdout=subprocess.PIPE).stdout.strip().decode(sys.stdout.encoding).split()[0]
 
 with open(metafile, "w") as f:
     f.write(json.dumps({"sha256": filehash, "version": version, "url": "https://github.com/Adamcake/bolt-alerts/releases/download/{}/{}".format(version, tempfilename)}))
