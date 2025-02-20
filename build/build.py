@@ -43,6 +43,8 @@ with open(metafile, "w") as f:
 subprocess.run(["git", "-C", basedir, "add", boltfile, metafile])
 subprocess.run(["git", "-C", basedir, "commit", "-m", "publish v{}".format(version)])
 subprocess.run(["git", "-C", basedir, "tag", "-a", version, "-m", "v{}".format(version)])
+subprocess.run(["git", "-C", basedir, "push", "--tags"])
+subprocess.run(["git", "-C", basedir, "push"])
 
-print("Done. Now run 'git push', then create a release for tag '{}' and attach this file to it: {}".format(version, tempfile))
+print("Done. Now create a release for tag '{}', title it 'v{}', and attach this file to it: {}".format(version, version, tempfile))
 print("Do not rename or edit the file.")
