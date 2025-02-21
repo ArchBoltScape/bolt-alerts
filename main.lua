@@ -83,6 +83,7 @@ local models = {
   penguinagent = {center = bolt.point(0, 200, 0), boxsize = 450, boxthickness = 120}, -- 001 through 007, but not the disguised ones
   serenspirit = {center = bolt.point(0, 350, 0), boxsize = 400, boxthickness = 100},
   firespirit = {center = bolt.point(0, 300, 0), boxsize = 310, boxthickness = 105}, -- normal and divine
+  eliteslayermob = {center = bolt.point(0, 0, 0), boxsize = 500, boxthickness = 120}, -- the white ring around all elite slayer mobs
 }
 
 -- both buffs and debuffs go in this table
@@ -410,6 +411,12 @@ local render3dlookup = {
   [2652] = function (event)
     local x, y, z = event:vertexpoint(1):get()
     if x == 27 and y == 349 and z == -53 then return models.serenspirit end
+    return nil
+  end,
+
+  [6612] = function (event)
+    local x, y, z = event:vertexpoint(1):get()
+    if x == 298 and y == 131 and z == 163 then return models.eliteslayermob end
     return nil
   end,
 
