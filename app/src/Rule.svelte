@@ -3,6 +3,7 @@
     let params = new URLSearchParams(window.location.search);
     let ruleTypeParam = params.get('type');
     let numberParam = params.get('number');
+    let exactText = params.get('exacttext');
 
     let id: string | null = params.get('id');
     let rulesetId: string = params.get('ruleset_id')!;
@@ -13,8 +14,8 @@
     let find: string | null = params.get('find');
 
     let afkTimeoutValue: number;
-    let matchTypeIsExact: boolean = find === null;
-    let findExactValue: string;
+    let matchTypeIsExact: boolean = find === null || exactText !== null;
+    let findExactValue: string = exactText ?? '';
     let xpGainModeIsTimeout: boolean | null = null;
     let xpGainTimeoutValue: number;
 
@@ -91,6 +92,7 @@
         if (ref) params['ref'] = ref;
         if (comparator) params['comparator'] = comparator;
         if (find) params['find'] = find;
+        if (matchTypeIsExact) params['exacttext'] = findExactValue;
         return '\x02\x00'.concat(new URLSearchParams(params).toString());
     }
 

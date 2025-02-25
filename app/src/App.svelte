@@ -25,6 +25,7 @@
           ref: rule.ref,
           comparator: rule.comparator,
           find: rule.find,
+          exacttext: rule.exacttext,
         };
       }
       const id = randomUUID();
