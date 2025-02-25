@@ -16,6 +16,7 @@ export interface AlertRule {
   ref?: string; // string that will be used to index object tables in lua
   comparator?: string; // name of comparator function, for rule types that have comparators
   find?: string; // lua pattern string that incoming strings will be compared to
+  exacttext?: string; // "exact" text to display to the user instead of the underlying pattern in the "find" field
 }
 
 export interface Ruleset {
@@ -36,6 +37,7 @@ export interface ConfigRule {
   ref?: string;
   comparator?: string;
   find?: string;
+  exacttext?: string;
 }
 
 export interface ConfigRuleset {

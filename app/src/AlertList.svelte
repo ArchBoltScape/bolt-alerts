@@ -120,6 +120,7 @@
                     ref: params.get('ref') ?? undefined,
                     comparator: params.get('comparator') ?? undefined,
                     find: params.get('find') ?? undefined,
+                    exacttext: params.get('exacttext') ?? undefined,
                 };
                 ruleset.expanded = true;
                 list.set(rulesets);
@@ -184,6 +185,7 @@
                     ref: x.ref,
                     comparator: x.comparator,
                     find: x.find,
+                    exacttext: x.exacttext,
                 }}),
                 doFlashWindow: ruleset.doFlashWindow,
                 sound: ruleset.sound,
@@ -233,6 +235,7 @@
         if (rule.ref) params['ref'] = rule.ref;
         if (rule.comparator) params['comparator'] = rule.comparator;
         if (rule.find) params['find'] = rule.find;
+        if (rule.exacttext) params['exacttext'] = rule.exacttext;
         const body = '\x04\x00'.concat(new URLSearchParams(params).toString());
         fetch("https://bolt-api/send-message", { method: 'POST', body });
     };
@@ -280,11 +283,11 @@
                         return `buff '${rule.ref}'`;
                 }
             case RuleType.chat:
-                return `chat text: '${rule.find}'`;
+                return `chat text: '${rule.exacttext ?? rule.find}'`;
             case RuleType.model:
                 return `3D model: '${rule.ref}'`;
             case RuleType.popup:
-                return `popup text: '${rule.find}'`;
+                return `popup text: '${rule.exacttext ?? rule.find}'`;
             case RuleType.stat:
                 if (typeof(rule.number) !== 'number') return `stat '${rule.ref}'`;
                 return `stat '${rule.ref}' < ${rule.number}%`;

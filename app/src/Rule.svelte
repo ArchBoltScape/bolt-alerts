@@ -3,6 +3,7 @@
     let params = new URLSearchParams(window.location.search);
     let ruleTypeParam = params.get('type');
     let numberParam = params.get('number');
+    let exactText = params.get('exacttext');
 
     let id: string | null = params.get('id');
     let rulesetId: string = params.get('ruleset_id')!;
@@ -13,8 +14,8 @@
     let find: string | null = params.get('find');
 
     let afkTimeoutValue: number;
-    let matchTypeIsExact: boolean = find === null;
-    let findExactValue: string;
+    let matchTypeIsExact: boolean = find === null || exactText !== null;
+    let findExactValue: string = exactText ?? '';
     let xpGainModeIsTimeout: boolean | null = null;
     let xpGainTimeoutValue: number;
 
@@ -91,6 +92,7 @@
         if (ref) params['ref'] = ref;
         if (comparator) params['comparator'] = comparator;
         if (find) params['find'] = find;
+        if (matchTypeIsExact) params['exacttext'] = findExactValue;
         return '\x02\x00'.concat(new URLSearchParams(params).toString());
     }
 
@@ -259,10 +261,11 @@
             <label for="8">Model:</label>
             <br>
             <select id="8" bind:value={ref} class="border-1 px-[3px] py-[2px] border-white text-white text-[10pt] focus:border-3 focus:px-[1px] focus:py-0">
-                <option class="text-black" value="lostsoul">Lost souls</option>
+                <option class="text-black" value="lostsoul">Elidinis spirits</option>
+                <option class="text-black" value="eliteslayermob">Elite slayer mobs</option>
+                <option class="text-black" value="firespirit">Fire spirits</option>
                 <option class="text-black" value="penguinagent">Penguin agents 001-007</option>
                 <option class="text-black" value="serenspirit">Seren spirits</option>
-                <option class="text-black" value="firespirit">Fire spirits</option>
             </select>
         {:else if ruleType === RuleType.stat}
             <label for="9">Stat:</label>
